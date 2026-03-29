@@ -10,15 +10,17 @@ import (
 	"log"
 	randm "math/rand"
 	"net"
+	"time"
 
 	"github.com/codegamc/gomatter/mattertlv"
 )
 
 // spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).
 // This uses SPAKE2+ protocol
-func spake2pExchange(ctx context.Context, pin int, udp *udpChannel) (*SecureChannel, error) {
+func spake2pExchange(ctx context.Context, pin int, udp *udpChannel, receiveTimeout time.Duration) (*SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
 	secure_channel := newSecureChannel(udp)
+	secure_channel.SetReceiveTimeout(receiveTimeout)
 	secure_channel.session = 0
 	secure_channel.Counter = uint32(randm.Intn(0xffffffff))
 
@@ -82,6 +84,7 @@ func spake2pExchange(ctx context.Context, pin int, udp *udpChannel) (*SecureChan
 	}
 
 	secure_channel = newSecureChannel(udp)
+	secure_channel.SetReceiveTimeout(receiveTimeout)
 	secure_channel.decrypt_key = sctx.decrypt_key
 	secure_channel.encrypt_key = sctx.encrypt_key
 	secure_channel.remote_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
@@ -159,16 +162,18 @@ func SigmaExchange(ctx context.Context, fabric *Fabric, controller_id uint64, de
 //   - pin is passcode used for device pairing
 //   - controller_id is identifier of node whioch will be owner/admin of this device
 //   - device_id_id is identifier of "new" device
-func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, controller_id, device_id uint64) error {
+func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, controller_id, device_id uint64, opts ...Option) error {
+	o := applyOptions(opts)
 
-	channel, err := startUdpChannel(device_ip, 5540, 55555)
+	channel, err := startUdpChannel(device_ip, o.remotePort, o.localPort)
 	if err != nil {
 		return err
 	}
 	secure_channel := newSecureChannel(channel)
+	secure_channel.SetReceiveTimeout(o.receiveTimeout)
 	defer secure_channel.Close()
 
-	secure_channel, err = spake2pExchange(ctx, pin, channel)
+	secure_channel, err = spake2pExchange(ctx, pin, channel, o.receiveTimeout)
 	if err != nil {
 		return err
 	}
@@ -270,12 +275,14 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 	return nil
 }
 
-func ConnectDevice(ctx context.Context, device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64) (*SecureChannel, error) {
+func ConnectDevice(ctx context.Context, device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64, opts ...Option) (*SecureChannel, error) {
+	o := applyOptions(opts)
 	var secure_channel *SecureChannel
 	var err error
-	if secure_channel, err = StartSecureChannel(device_ip, port, 55555); err != nil {
+	if secure_channel, err = StartSecureChannel(device_ip, port, o.localPort); err != nil {
 		return nil, err
 	}
+	secure_channel.SetReceiveTimeout(o.receiveTimeout)
 	if secure_channel, err = SigmaExchange(ctx, fabric, admin_id, device_id, secure_channel); err != nil {
 		return nil, err
 	}
