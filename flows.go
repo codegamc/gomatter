@@ -13,9 +13,9 @@ import (
 	"github.com/codegamc/gomatter/mattertlv"
 )
 
-// Spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).
+// spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).
 // This uses SPAKE2+ protocol
-func Spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
+func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
 	secure_channel := newSecureChannel(udp)
 	secure_channel.session = 0
@@ -167,7 +167,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	secure_channel := newSecureChannel(channel)
 	defer secure_channel.Close()
 
-	secure_channel, err = Spake2pExchange(pin, channel)
+	secure_channel, err = spake2pExchange(pin, channel)
 	if err != nil {
 		return err
 	}
