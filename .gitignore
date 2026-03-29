@@ -1,4 +1,5 @@
 *.pem
 tmp
 main
+gomat
 symbols/xml

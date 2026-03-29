@@ -18,6 +18,16 @@ import (
 	"github.com/tom-code/gomat/symbols"
 )
 
+func commissionError(pin string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "pake3 is not success code: 2") {
+		return fmt.Errorf("commissioning failed: device rejected the passcode during PASE (PAKE3 status 2). Check that --pin is the 8-digit setup passcode, not the manual pairing code, and that the device is still open for commissioning")
+	}
+	return fmt.Errorf("commissioning failed: %w", err)
+}
+
 func filter_devices(devices []discover.DiscoveredDevice, qr onboarding_payload.QrContent) []discover.DiscoveredDevice {
 	out := []discover.DiscoveredDevice{}
 	for _, device := range devices {
@@ -590,12 +600,12 @@ func main() {
 			}
 			var tlv mattertlv.TLVBuffer
 			b := bytes.NewBuffer([]byte{})
-			for x:=0; x<5; x++ {
-				for y:=0; y<5; y++ {
+			for x := 0; x < 5; x++ {
+				for y := 0; y < 5; y++ {
 					b.WriteByte(byte(0xff))
-					b.WriteByte(byte(x*50+50))
+					b.WriteByte(byte(x*50 + 50))
 					b.WriteByte(byte(10))
-					b.WriteByte(byte(y*40))
+					b.WriteByte(byte(y * 40))
 				}
 			}
 			tlv.WriteOctetString(0, b.Bytes())
@@ -654,26 +664,43 @@ func main() {
 
 	var commissionCmd = &cobra.Command{
 		Use: "commission",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ip, _ := cmd.Flags().GetString("ip")
 			if len(ip) == 0 {
-				panic("ip address is required")
+				return fmt.Errorf("ip address is required")
 			}
 			pin, _ := cmd.Flags().GetString("pin")
 			if len(pin) == 0 {
-				panic("passcode is required")
+				return fmt.Errorf("passcode is required")
 			}
 			fabric := createBasicFabricFromCmd(cmd)
 			device_id, _ := cmd.Flags().GetUint64("device-id")
 			controller_id, _ := cmd.Flags().GetUint64("controller-id")
 			pinn, err := strconv.Atoi(pin)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("invalid passcode %q: %w", pin, err)
 			}
 			//commision(fabric, discover_with_qr(qr).addrs[1], 123456)
 			err = gomat.Commission(fabric, net.ParseIP(ip), pinn, controller_id, device_id)
 			if err != nil {
-				panic(err)
+				if strings.Contains(err.Error(), "pake3 is not success code: 2") {
+					normalizedPin := strings.ReplaceAll(pin, "-", "")
+					if len(normalizedPin) == 11 || len(normalizedPin) == 21 {
+						pairingCode := onboarding_payload.DecodeManualPairingCode(pin)
+						passcode := pairingCode.Passcode
+						fmt.Printf("commissioning note: --pin=%q looks like a manual pairing code; retrying with decoded setup passcode %d\n", pin, passcode)
+						retryErr := gomat.Commission(fabric, net.ParseIP(ip), int(passcode), controller_id, device_id)
+						if retryErr == nil {
+							fmt.Printf("commissioning note: automatic retry with decoded setup passcode %d succeeded\n", passcode)
+							err = nil
+						} else {
+							return fmt.Errorf("commissioning failed: device rejected --pin=%q during PASE, automatic retry with decoded setup passcode %d also failed: %w", pin, passcode, retryErr)
+						}
+					}
+				}
+			}
+			if err != nil {
+				return commissionError(pin, err)
 			}
 
 			cf := fabric.CompressedFabric()
@@ -681,6 +708,7 @@ func main() {
 			dids := fmt.Sprintf("%s-%016X", csf, device_id)
 			dids = strings.ToUpper(dids)
 			fmt.Printf("device identifier: %s\n", dids)
+			return nil
 		},
 	}
 	commissionCmd.Flags().StringP("ip", "i", "", "ip address")
@@ -848,5 +876,5 @@ func main() {
 	rootCmd.AddCommand(decodeQrCmd)
 	rootCmd.AddCommand(decodeManualCmd)
 	rootCmd.AddCommand(printInfoCmd)
-	rootCmd.Execute()
+	cobra.CheckErr(rootCmd.Execute())
 }
