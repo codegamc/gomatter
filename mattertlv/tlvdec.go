@@ -168,12 +168,12 @@ func (i TlvItem) GetOctetStringRec(tag []int) []byte {
 	}
 }
 
-func (i TlvItem) GetIntRec(tag []int) (uint64, error) {
+func (i TlvItem) GetIntRec(tag []int) (int, error) {
 	item := i.GetItemRec(tag)
 	if item == nil {
 		return 0, fmt.Errorf("not found")
 	} else {
-		return item.valueInt, nil
+		return int(item.valueInt), nil
 	}
 }
 

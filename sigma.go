@@ -164,7 +164,7 @@ func (sc *sigmaContext) sigma3(fabric *Fabric) ([]byte, error) {
 	salt = append(salt, transcript_hash...)
 
 	keypack := hkdf_sha256(shared_secret, salt, []byte("SessionKeys"), 16*3)
-	sc.session = int(sigma2responder_session)
+	sc.session = sigma2responder_session
 
 	sc.i2rkey = keypack[:16]
 	sc.r2ikey = keypack[16:32]

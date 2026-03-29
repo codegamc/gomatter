@@ -51,7 +51,7 @@ func assertSubscribeDefaults(t *testing.T, decoded mattertlv.TlvItem) {
 	assertSubscribeIntervals(t, decoded, 0, 5)
 }
 
-func assertSubscribeIntervals(t *testing.T, decoded mattertlv.TlvItem, wantMin uint64, wantMax uint64) {
+func assertSubscribeIntervals(t *testing.T, decoded mattertlv.TlvItem, wantMin int, wantMax int) {
 	t.Helper()
 
 	minInterval, err := decoded.GetIntRec([]int{1})

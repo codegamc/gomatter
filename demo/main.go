@@ -324,7 +324,10 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 		panic("did not receive report data message")
 	}
 
-	final_result := gomat.ParseImInvokeResponse(&resp.Tlv)
+	final_result, err := gomat.ParseImInvokeResponse(&resp.Tlv)
+	if err != nil {
+		log.Printf("failed to parse response: %v\n", err)
+	}
 	switch final_result {
 	case 0:
 		log.Println("open commissioning success")

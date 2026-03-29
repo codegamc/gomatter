@@ -42,7 +42,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	}
 
 	sctx := NewSpakeCtx()
-	sctx.Gen_w(pin, pbkdf_response_salt, int(pbkdf_response_iterations))
+	sctx.Gen_w(pin, pbkdf_response_salt, pbkdf_response_iterations)
 	sctx.Gen_random_X()
 	sctx.Calc_X()
 
@@ -85,7 +85,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	secure_channel.encrypt_key = sctx.encrypt_key
 	secure_channel.remote_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
 	secure_channel.local_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	secure_channel.session = int(pbkdf_response_session)
+	secure_channel.session = pbkdf_response_session
 
 	return secure_channel, nil
 }
@@ -204,7 +204,10 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	if err != nil {
 		return err
 	}
-	resp_status := ParseImInvokeResponse(&resp.Tlv)
+	resp_status, err := ParseImInvokeResponse(&resp.Tlv)
+	if err != nil {
+		return fmt.Errorf("unexpected status to AddTrustedRootCertificate: %w", err)
+	}
 	if resp_status != 0 {
 		return fmt.Errorf("unexpected status to AddTrustedRootCertificate %d", resp_status)
 	}

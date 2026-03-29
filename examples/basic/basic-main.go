@@ -56,7 +56,7 @@ func sendOnCommand(secure_channel *gomat.SecureChannel) {
 	if response.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_INVOKE_RSP {
 		panic("unexpected message")
 	}
-	if gomat.ParseImInvokeResponse(&response.Tlv) != 0 {
+	if status, err := gomat.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
 		response.Tlv.Dump(0)
 		panic("response was not OK")
 	}
@@ -84,7 +84,7 @@ func sendColorCommand(secure_channel *gomat.SecureChannel) {
 	if response.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_INVOKE_RSP {
 		panic("unexpected message")
 	}
-	if gomat.ParseImInvokeResponse(&response.Tlv) != 0 {
+	if status, err := gomat.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
 		response.Tlv.Dump(0)
 		panic("response was not OK")
 	}

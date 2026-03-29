@@ -502,21 +502,20 @@ func EncodeIMStatusResponse(exchange_id uint16, iflag byte) []byte {
 	return buffer.Bytes()
 }
 
-// ParseImInvokeResponse parses IM InvokeResponse TLV
-//   - returns 0 when success
-//   - returns -1 when parsing did fail
-//   - returned number > 0 is ClusterStatus code
-func ParseImInvokeResponse(resp *mattertlv.TlvItem) int {
+// ParseImInvokeResponse parses IM InvokeResponse TLV.
+// Returns (0, nil) on success, (clusterStatusCode, nil) on cluster error,
+// or (0, err) when the response cannot be parsed.
+func ParseImInvokeResponse(resp *mattertlv.TlvItem) (int, error) {
 	common_status := resp.GetItemRec([]int{1, 0, 1, 1, 0})
 	if common_status == nil {
-		return -1
+		return 0, fmt.Errorf("failed to parse invoke response")
 	}
 	if common_status.GetInt() == 0 {
-		return 0
+		return 0, nil
 	}
 	cluster_status := resp.GetItemRec([]int{1, 0, 1, 1, 1})
 	if cluster_status == nil {
-		return -1
+		return 0, fmt.Errorf("failed to parse cluster status")
 	}
-	return cluster_status.GetInt()
+	return cluster_status.GetInt(), nil
 }
