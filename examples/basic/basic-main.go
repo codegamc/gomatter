@@ -10,7 +10,6 @@ package main
 import (
 	"math/rand"
 	"net"
-	"os"
 
 	"github.com/codegamc/gomatter"
 	"github.com/codegamc/gomatter/mattertlv"
@@ -18,8 +17,7 @@ import (
 )
 
 func bootstrap_ca(fabric_id, admin_user uint64) {
-	os.Mkdir("pem", 0700)
-	cm := gomat.NewFileCertManager(fabric_id)
+	cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
 	cm.BootstrapCa()
 	cm.Load()
 	if err := cm.CreateUser(admin_user); err != nil {
@@ -28,7 +26,7 @@ func bootstrap_ca(fabric_id, admin_user uint64) {
 }
 
 func loadFabric(fabric_id uint64) *gomat.Fabric {
-	cm := gomat.NewFileCertManager(fabric_id)
+	cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
 	cm.Load()
 	return gomat.NewFabric(fabric_id, cm)
 }

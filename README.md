@@ -101,7 +101,7 @@ func main() {
   device_ip := "192.168.5.178"
   pin := 123456
 
-  cm := gomat.NewFileCertManager(fabric_id)
+  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
   cm.BootstrapCa()
   cm.Load()
   cm.CreateUser(admin_user)
@@ -127,7 +127,7 @@ func main() {
   var device_id uint64 = 10
   device_ip := "192.168.5.178"
 
-  cm := gomat.NewFileCertManager(fabric_id)
+  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
   cm.Load()
   fabric := gomat.NewFabric(fabric_id, cm)
 
@@ -177,7 +177,7 @@ func main() {
   var device_id uint64 = 10
 
 
-  cm := gomat.NewFileCertManager(fabric_id)
+  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
   cm.Load()
   fabric := gomat.NewFabric(fabric_id, cm)
 
@@ -237,7 +237,7 @@ func main() {
 	var device_id uint64 = 10
 	device_ip := "192.168.5.178"
 
-	cm := gomat.NewFileCertManager(fabric_id)
+	cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
 	cm.Load()
 	fabric := gomat.NewFabric(fabric_id, cm)
 
@@ -273,7 +273,7 @@ func main() {
 
 
 #### certificate manager
-NewFabric function accepts certificate manager object as input parameter. Certificate manager must implement interface CertificateManager and user can supply own implementation. Supplied CertManager created by NewFileCertManager is very simple and stores all data in .pem files under pem directory.
+NewFabric function accepts certificate manager object as input parameter. Certificate manager must implement interface CertificateManager and user can supply own implementation. Supplied CertManager created by `NewFileCertManager` stores all data in `.pem` files under the default `pem` directory, and `FileCertManagerConfig.Path` can be used to store them somewhere else.
 
 #### notes
 consider move to https://pkg.go.dev/filippo.io/nistec

@@ -18,10 +18,12 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -32,15 +34,33 @@ func certIdToName(id uint64) string {
 // PEM file backed certiticate manager
 type FileCertManager struct {
 	fabric         uint64
+	path           string
 	ca_certificate *x509.Certificate
 	ca_private_key *ecdsa.PrivateKey
 }
 
-func NewFileCertManager(fabric uint64) *FileCertManager {
+type FileCertManagerConfig struct {
+	Path string
+}
+
+func NewFileCertManager(fabric uint64, config FileCertManagerConfig) *FileCertManager {
+	if config.Path == "" {
+		config.Path = "pem"
+	}
 	return &FileCertManager{
 		fabric: fabric,
+		path:   config.Path,
 	}
 }
+
+func (cm *FileCertManager) pathFor(name string) string {
+	return filepath.Join(cm.path, name)
+}
+
+func (cm *FileCertManager) pemBase(name string) string {
+	return filepath.Join(cm.path, name)
+}
+
 func (cm *FileCertManager) GetCaPublicKey() ecdsa.PublicKey {
 	return cm.ca_private_key.PublicKey
 }
@@ -50,25 +70,28 @@ func (cm *FileCertManager) GetCaCertificate() *x509.Certificate {
 
 // Load initializes CA. It loads required state from files.
 func (cm *FileCertManager) Load() error {
-	_, err := os.Stat("pem/ca-private.pem")
+	privateKeyPath := cm.pathFor("ca-private.pem")
+	_, err := os.Stat(privateKeyPath)
 	if err != nil {
-		log.Printf("can't open CA key. continue anyway %s\n", err.Error())
-		return nil
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("CA private key %q does not exist: %w", privateKeyPath, err)
+		}
+		return fmt.Errorf("stat CA private key %q: %w", privateKeyPath, err)
 	}
-	anykey, err := loadPrivKey("pem/ca-private.pem")
+	anykey, err := loadPrivKey(privateKeyPath)
 	if err != nil {
 		return err
 	}
 	cm.ca_private_key = anykey.(*ecdsa.PrivateKey)
-	cm.ca_certificate, err = loadCertificate("pem/ca-cert.pem")
+	cm.ca_certificate, err = loadCertificate(cm.pathFor("ca-cert.pem"))
 	return err
 }
 
 func (cm *FileCertManager) GetCertificate(id uint64) (*x509.Certificate, error) {
-	return loadCertificate("pem/" + certIdToName(id) + "-cert.pem")
+	return loadCertificate(cm.pathFor(certIdToName(id) + "-cert.pem"))
 }
 func (cm *FileCertManager) GetPrivkey(id uint64) (*ecdsa.PrivateKey, error) {
-	pk, err := loadPrivKey("pem/" + certIdToName(id) + "-private.pem")
+	pk, err := loadPrivKey(cm.pathFor(certIdToName(id) + "-private.pem"))
 	if err != nil {
 		return nil, err
 	}
@@ -76,15 +99,20 @@ func (cm *FileCertManager) GetPrivkey(id uint64) (*ecdsa.PrivateKey, error) {
 }
 
 func (cm *FileCertManager) CreateUser(node_id uint64) error {
-	id := fmt.Sprintf("%d", node_id)
-	privkey, err := generateAndStoreKeyEcdsa("pem/" + id)
+	if err := os.MkdirAll(cm.path, 0700); err != nil {
+		return fmt.Errorf("create certificate directory %q: %w", cm.path, err)
+	}
+	privkey, err := generateAndStoreKeyEcdsa(cm.pemBase(certIdToName(node_id)))
 	if err != nil {
 		return err
 	}
-	cm.SignCertificate(&privkey.PublicKey, node_id)
-	return nil
+	_, err = cm.SignCertificate(&privkey.PublicKey, node_id)
+	return err
 }
 func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id uint64) (*x509.Certificate, error) {
+	if cm.ca_private_key == nil || cm.ca_certificate == nil {
+		return nil, fmt.Errorf("CA certificate and private key must be loaded before signing certificates")
+	}
 
 	public_key_auth := elliptic.Marshal(elliptic.P256(), cm.ca_private_key.PublicKey.X, cm.ca_private_key.PublicKey.Y)
 	sh := sha1.New()
@@ -169,20 +197,29 @@ func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id
 	if err != nil {
 		return nil, err
 	}
-	storeCertificate("pem/"+certIdToName(node_id), cert_bytes)
+	if err := storeCertificate(cm.pemBase(certIdToName(node_id)), cert_bytes); err != nil {
+		return nil, err
+	}
 	log.Printf("Signed certificate for node 0x%x\n", node_id)
 	return out_parsed, nil
 }
 
 // BootstrapCa initializes CA - creates CA keys and certificate
 func (cm *FileCertManager) BootstrapCa() error {
-	_, err := os.Stat("pem/ca-private.pem")
+	if err := os.MkdirAll(cm.path, 0700); err != nil {
+		return fmt.Errorf("create certificate directory %q: %w", cm.path, err)
+	}
+	privateKeyPath := cm.pathFor("ca-private.pem")
+	_, err := os.Stat(privateKeyPath)
 	if err == nil {
 		log.Printf("CA private key already present - skipping bootstrap\n")
 		return nil
 	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("stat CA private key %q: %w", privateKeyPath, err)
+	}
 
-	_, err = generateAndStoreKeyEcdsa("pem/ca")
+	_, err = generateAndStoreKeyEcdsa(cm.pemBase("ca"))
 	if err != nil {
 		return err
 	}
@@ -191,12 +228,12 @@ func (cm *FileCertManager) BootstrapCa() error {
 }
 
 func (cm *FileCertManager) createCaCert() error {
-	pubany, err := loadPublicKey("pem/ca-public.pem")
+	pubany, err := loadPublicKey(cm.pathFor("ca-public.pem"))
 	if err != nil {
 		return err
 	}
 	pub := pubany.(*ecdsa.PublicKey)
-	priv_ca, err := loadPrivKey("pem/ca-private.pem")
+	priv_ca, err := loadPrivKey(cm.pathFor("ca-private.pem"))
 	if err != nil {
 		return err
 	}
@@ -257,7 +294,9 @@ func (cm *FileCertManager) createCaCert() error {
 	if err != nil {
 		return err
 	}
-	storeCertificate("pem/ca", cert_bytes)
+	if err := storeCertificate(cm.pemBase("ca"), cert_bytes); err != nil {
+		return err
+	}
 	log.Println("CA certificate was created")
 	return nil
 }
@@ -301,6 +340,9 @@ func loadPrivKey(file string) (any, error) {
 		return nil, err
 	}
 	pem_block, _ := pem.Decode(data)
+	if pem_block == nil {
+		return nil, fmt.Errorf("decode PEM private key %q: no PEM data found", file)
+	}
 	key, err := x509.ParseECPrivateKey(pem_block.Bytes)
 	if err != nil {
 		return nil, err
@@ -313,6 +355,9 @@ func loadPublicKey(file string) (any, error) {
 		return nil, err
 	}
 	pem_block, _ := pem.Decode(data)
+	if pem_block == nil {
+		return nil, fmt.Errorf("decode PEM public key %q: no PEM data found", file)
+	}
 	key, err := x509.ParsePKIXPublicKey(pem_block.Bytes)
 	if err != nil {
 		return nil, err
@@ -320,15 +365,16 @@ func loadPublicKey(file string) (any, error) {
 	return key, nil
 }
 
-func storeCertificate(name string, cert_bytes []byte) {
+func storeCertificate(name string, cert_bytes []byte) error {
 	certBlock := pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: cert_bytes,
 	}
 	err := os.WriteFile(name+"-cert.pem", pem.EncodeToMemory(&certBlock), 0600)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func loadCertificate(file string) (*x509.Certificate, error) {
@@ -337,6 +383,9 @@ func loadCertificate(file string) (*x509.Certificate, error) {
 		return nil, err
 	}
 	pem_block, _ := pem.Decode(data)
+	if pem_block == nil {
+		return nil, fmt.Errorf("decode PEM certificate %q: no PEM data found", file)
+	}
 	cert, err := x509.ParseCertificate(pem_block.Bytes)
 	if err != nil {
 		return nil, err

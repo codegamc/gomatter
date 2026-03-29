@@ -420,7 +420,7 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 }
 
 func createBasicFabric(id uint64) *gomat.Fabric {
-	cert_manager := gomat.NewFileCertManager(id)
+	cert_manager := gomat.NewFileCertManager(id, gomat.FileCertManagerConfig{})
 	err := cert_manager.Load()
 	if err != nil {
 		panic(err)
@@ -812,7 +812,7 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("invalid fabric id %s", fabric_id_str))
 			}
-			cm := gomat.NewFileCertManager(id)
+			cm := gomat.NewFileCertManager(id, gomat.FileCertManagerConfig{})
 			err = cm.BootstrapCa()
 			if err != nil {
 				panic(err)
