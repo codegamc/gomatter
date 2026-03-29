@@ -10,7 +10,7 @@ import (
 	randm "math/rand"
 	"net"
 
-	"github.com/tom-code/gomat/mattertlv"
+	"github.com/codegamc/gomatter/mattertlv"
 )
 
 // Spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).

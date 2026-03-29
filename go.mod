@@ -1,4 +1,4 @@
-module github.com/tom-code/gomat
+module github.com/codegamc/gomatter
 
 go 1.21
 

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/tom-code/gomat/mattertlv"
+	"github.com/codegamc/gomatter/mattertlv"
 )
 
 func decodeInteractionMessage(t *testing.T, encoded []byte) (ProtocolMessageHeader, mattertlv.TlvItem) {

@@ -9,8 +9,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 
-	"github.com/tom-code/gomat/ccm"
-	"github.com/tom-code/gomat/mattertlv"
+	"github.com/codegamc/gomatter/ccm"
+	"github.com/codegamc/gomatter/mattertlv"
 )
 
 type sigmaContext struct {

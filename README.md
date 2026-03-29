@@ -1,9 +1,9 @@
-# gomat
-Simple matter protocol library
+# gomatter
+Simple Matter protocol library for Go.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/tom-code/gomat.svg)](https://pkg.go.dev/github.com/tom-code/gomat)
-![go build](https://github.com/tom-code/gomat/actions/workflows/go.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tom-code/gomat)](https://goreportcard.com/report/github.com/tom-code/gomat)
+[![Go Reference](https://pkg.go.dev/badge/github.com/codegamc/gomatter.svg)](https://pkg.go.dev/github.com/codegamc/gomatter)
+![go build](https://github.com/codegamc/gomatter/actions/workflows/go.yml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/codegamc/gomatter)](https://goreportcard.com/report/github.com/codegamc/gomatter)
 
 ### goal of project
 The goal is to create golang library and supporting tools to access matter devices.
@@ -39,38 +39,38 @@ The goal is to create golang library and supporting tools to access matter devic
 ### how to use test application
 - compile
 ```
-git clone git@github.com:tom-code/gomat.git
-cd gomat
-go build -o gomat demo/main.go 
+git clone git@github.com:codegamc/gomatter.git
+cd gomatter
+go build -o gomatter demo/main.go
 ```
 
 - create directory to hold keys and certificates `mkdir pem`
-- generate CA key and certificate using `./gomat ca-bootstrap`
-- generate controller key and certificate using `./gomat ca-createuser 100`
+- generate CA key and certificate using `./gomatter ca-bootstrap`
+- generate controller key and certificate using `./gomatter ca-createuser 100`
   - 100 is example node-id of controller
 - find device IP
-  - discover command can be used to discover matter devices and their ip address `./gomat discover commissionable -d`
+  - discover command can be used to discover matter devices and their ip address `./gomatter discover commissionable -d`
 - find device commissioning passcode/pin
   - device may show it
-  - it can be extracted from QR code. use decode-qr to extract passcode from text representation of QR code `./gomat decode-qr MT:-24J0AFN00SIQ663000`
-  - it can be extracted from manual pairing code. use command decode-mc to extract passcode from manual pairing code `./gomat decode-mc 35792000079`
+  - it can be extracted from QR code. use decode-qr to extract passcode from text representation of QR code `./gomatter decode-qr MT:-24J0AFN00SIQ663000`
+  - it can be extracted from manual pairing code. use command decode-mc to extract passcode from manual pairing code `./gomatter decode-mc 35792000079`
 - perform commissioning of device. This authenticates using passcode, uploads CA certificate to device, signs and uploads device's own certificate and sets admin user id.
   - required for commisioning:
     - ip address of device
     - device commissioning passcode/pin
     - ca key and certificate
     - controller node key and certificate
-  - example: `./gomat commission --ip 192.168.5.178 --pin 123456 --controller-id 100 --device-id 500`
+  - example: `./gomatter commission --ip 192.168.5.178 --pin 123456 --controller-id 100 --device-id 500`
 - light on!
-  `./gomat cmd on --ip 192.168.5.178 --controller-id 100 --device-id 500`
+  `./gomatter cmd on --ip 192.168.5.178 --controller-id 100 --device-id 500`
 - set color hue=150 saturation=200 transition_time=10
-  `./gomat cmd color --ip 192.168.5.220 --controller-id 100 --device-id 500 150 200 10`
+  `./gomatter cmd color --ip 192.168.5.220 --controller-id 100 --device-id 500 150 200 10`
 - subscribe to a Matter event
-  `./gomat cmd subscribe --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x101 1`
+  `./gomatter cmd subscribe --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x101 1`
 - subscribe to an attribute report
-  `./gomat cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
+  `./gomatter cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
   - subscription commands now default to low-latency intervals: `--min-interval=0 --max-interval=5`
-  - override them when needed, for example: `./gomat cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 --min-interval 0 --max-interval 1 1 0x6 0`
+  - override them when needed, for example: `./gomatter cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 --min-interval 0 --max-interval 1 1 0x6 0`
 
 
 ### how to use api
@@ -90,7 +90,7 @@ package main
 import (
   "net"
 
-  "github.com/tom-code/gomat"
+  "github.com/codegamc/gomatter"
 )
 
 
@@ -117,7 +117,7 @@ package main
 import (
   "net"
 
-  "github.com/tom-code/gomat"
+  "github.com/codegamc/gomatter"
 )
 
 
@@ -166,8 +166,8 @@ import (
   "fmt"
   "strings"
 
-  "github.com/tom-code/gomat"
-  "github.com/tom-code/gomat/discover"
+  "github.com/codegamc/gomatter"
+  "github.com/codegamc/gomatter/discover"
 )
 
 
@@ -201,7 +201,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/tom-code/gomat/onboarding_payload"
+	"github.com/codegamc/gomatter/onboarding_payload"
 )
 
 
@@ -226,8 +226,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/tom-code/gomat"
-	"github.com/tom-code/gomat/mattertlv"
+	"github.com/codegamc/gomatter"
+	"github.com/codegamc/gomatter/mattertlv"
 )
 
 

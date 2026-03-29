@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/codegamc/gomatter"
+	"github.com/codegamc/gomatter/discover"
+	"github.com/codegamc/gomatter/mattertlv"
+	"github.com/codegamc/gomatter/onboarding_payload"
+	"github.com/codegamc/gomatter/symbols"
 	"github.com/spf13/cobra"
-	"github.com/tom-code/gomat"
-	"github.com/tom-code/gomat/discover"
-	"github.com/tom-code/gomat/mattertlv"
-	"github.com/tom-code/gomat/onboarding_payload"
-	"github.com/tom-code/gomat/symbols"
 )
 
 func commissionError(pin string, err error) error {
