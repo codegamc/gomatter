@@ -362,12 +362,10 @@ const (
 )
 
 type subscribeRequest struct {
-	kind        subscribeRequestKind
-	endpoint    uint16
-	cluster     uint32
-	id          uint32
-	minInterval uint16
-	maxInterval uint16
+	kind     subscribeRequestKind
+	endpoint uint16
+	cluster  uint32
+	id       uint32
 }
 
 func (r subscribeRequest) encodePayload(tlv *mattertlv.TLVBuffer) {
@@ -394,12 +392,12 @@ func (r subscribeRequest) encodePayload(tlv *mattertlv.TLVBuffer) {
 	}
 }
 
-func encodeIMSubscribeRequest(req subscribeRequest) []byte {
+func encodeIMSubscribeRequest(req subscribeRequest, opts subscribeOptions) []byte {
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteAnonStruct()
-	tlv.WriteBool(0, false)             // keep
-	tlv.WriteUInt16(1, req.minInterval) // min interval
-	tlv.WriteUInt16(2, req.maxInterval) // max interval
+	tlv.WriteBool(0, opts.keepSubscriptions) // keep subscriptions
+	tlv.WriteUInt16(1, opts.minInterval)     // min interval
+	tlv.WriteUInt16(2, opts.maxInterval)     // max interval
 	req.encodePayload(&tlv)
 	/*tlvx.WriteArray(5)
 		tlvx.WriteAnonStruct()
@@ -407,7 +405,7 @@ func encodeIMSubscribeRequest(req subscribeRequest) []byte {
 				tlvx.WriteUInt(1, mattertlv.TYPE_UINT_1, uint64(0))
 		tlvx.WriteAnonStructEnd()
 	tlvx.WriteAnonStructEnd()*/
-	tlv.WriteBool(7, false) // fabric filtered
+	tlv.WriteBool(7, opts.fabricFiltered) // fabric filtered
 	tlv.WriteUInt(0xff, mattertlv.TYPE_UINT_1, 10)
 	tlv.WriteStructEnd()
 
@@ -425,38 +423,26 @@ func encodeIMSubscribeRequest(req subscribeRequest) []byte {
 	return buffer.Bytes()
 }
 
-// EncodeIMSubscribeRequestWithIntervals encodes an Interaction Model Subscribe Request for a single event path.
-func EncodeIMSubscribeRequestWithIntervals(endpoint uint16, cluster uint32, event uint32, minInterval uint16, maxInterval uint16) []byte {
-	return encodeIMSubscribeRequest(subscribeRequest{
-		kind:        subscribeRequestKindEvent,
-		endpoint:    endpoint,
-		cluster:     cluster,
-		id:          event,
-		minInterval: minInterval,
-		maxInterval: maxInterval,
-	})
-}
-
 // EncodeIMSubscribeRequest encodes an Interaction Model Subscribe Request for a single event path.
-func EncodeIMSubscribeRequest(endpoint uint16, cluster uint32, event uint32) []byte {
-	return EncodeIMSubscribeRequestWithIntervals(endpoint, cluster, event, defaultSubscribeMinInterval, defaultSubscribeMaxInterval)
-}
-
-// EncodeIMSubscribeAttributeRequestWithIntervals encodes an Interaction Model Subscribe Request for a single attribute path.
-func EncodeIMSubscribeAttributeRequestWithIntervals(endpoint uint16, cluster uint32, attr uint32, minInterval uint16, maxInterval uint16) []byte {
+// Use SubscribeOption to configure intervals and filtering behavior.
+func EncodeIMSubscribeRequest(endpoint uint16, cluster uint32, event uint32, opts ...SubscribeOption) []byte {
 	return encodeIMSubscribeRequest(subscribeRequest{
-		kind:        subscribeRequestKindAttribute,
-		endpoint:    endpoint,
-		cluster:     cluster,
-		id:          attr,
-		minInterval: minInterval,
-		maxInterval: maxInterval,
-	})
+		kind:     subscribeRequestKindEvent,
+		endpoint: endpoint,
+		cluster:  cluster,
+		id:       event,
+	}, applySubscribeOptions(opts))
 }
 
 // EncodeIMSubscribeAttributeRequest encodes an Interaction Model Subscribe Request for a single attribute path.
-func EncodeIMSubscribeAttributeRequest(endpoint uint16, cluster uint32, attr uint32) []byte {
-	return EncodeIMSubscribeAttributeRequestWithIntervals(endpoint, cluster, attr, defaultSubscribeMinInterval, defaultSubscribeMaxInterval)
+// Use SubscribeOption to configure intervals and filtering behavior.
+func EncodeIMSubscribeAttributeRequest(endpoint uint16, cluster uint32, attr uint32, opts ...SubscribeOption) []byte {
+	return encodeIMSubscribeRequest(subscribeRequest{
+		kind:     subscribeRequestKindAttribute,
+		endpoint: endpoint,
+		cluster:  cluster,
+		id:       attr,
+	}, applySubscribeOptions(opts))
 }
 
 // EncodeIMInvokeRequest encodes Interaction Model Timed Request message

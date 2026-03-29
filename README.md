@@ -33,6 +33,7 @@ The goal is to create golang library and supporting tools to access matter devic
   - certificates are signed by CA
   - during commissioning procedure root CA certificate is pushed to device together with id of device admin user
   - root CA certificate is something you need to create once and store. loosing CA keys usually means that you will have to commission devices again
+  - You will not be able to commission a device unless it is already on the network. This library does not support the bluetooth commmissioning required. 
   - to talk to device you have to commission it first
     - to commission device you usually need its pin/passcode and device be in state open for commissioning
     - device gets into commissioning window open state often by "factory reset"

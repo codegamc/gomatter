@@ -348,7 +348,7 @@ func test_subscribe(cmd *cobra.Command, args []string) {
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	event, _ := strconv.ParseInt(args[2], 0, 16)
 	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
-	runSubscription(cmd, gomatter.EncodeIMSubscribeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(event), minInterval, maxInterval), "EVENT", eventReportDictionary)
+	runSubscription(cmd, gomatter.EncodeIMSubscribeRequest(uint16(endpoint), uint32(cluster), uint32(event), gomatter.WithMinInterval(minInterval), gomatter.WithMaxInterval(maxInterval)), "EVENT", eventReportDictionary)
 }
 
 func test_subscribe_attr(cmd *cobra.Command, args []string) {
@@ -356,7 +356,7 @@ func test_subscribe_attr(cmd *cobra.Command, args []string) {
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	attr, _ := strconv.ParseInt(args[2], 0, 16)
 	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
-	runSubscription(cmd, gomatter.EncodeIMSubscribeAttributeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(attr), minInterval, maxInterval), "ATTRIBUTE", attributeReportDictionary)
+	runSubscription(cmd, gomatter.EncodeIMSubscribeAttributeRequest(uint16(endpoint), uint32(cluster), uint32(attr), gomatter.WithMinInterval(minInterval), gomatter.WithMaxInterval(maxInterval)), "ATTRIBUTE", attributeReportDictionary)
 }
 
 func subscriptionIntervalsFromCmd(cmd *cobra.Command) (uint16, uint16) {

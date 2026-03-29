@@ -135,8 +135,8 @@ func TestEncodeIMSubscribeAttributeRequest(t *testing.T) {
 	}
 }
 
-func TestEncodeIMSubscribeAttributeRequestWithIntervals(t *testing.T) {
-	encoded := EncodeIMSubscribeAttributeRequestWithIntervals(1, 0x6, 0, 2, 9)
+func TestEncodeIMSubscribeAttributeRequestWithOptions(t *testing.T) {
+	encoded := EncodeIMSubscribeAttributeRequest(1, 0x6, 0, WithMinInterval(2), WithMaxInterval(9))
 
 	header, decoded := decodeInteractionMessage(t, encoded)
 	if header.Opcode != InteractionOpcodeSubscReq {
@@ -148,4 +148,30 @@ func TestEncodeIMSubscribeAttributeRequestWithIntervals(t *testing.T) {
 
 	assertSubscribeEnvelope(t, decoded)
 	assertSubscribeIntervals(t, decoded, 2, 9)
+}
+
+func TestEncodeIMSubscribeAttributeRequestKeepSubscriptions(t *testing.T) {
+	encoded := EncodeIMSubscribeAttributeRequest(1, 0x6, 0, WithKeepSubscriptions(true))
+	_, decoded := decodeInteractionMessage(t, encoded)
+
+	keep := decoded.GetItemRec([]int{0})
+	if keep == nil {
+		t.Fatal("keep flag missing")
+	}
+	if !keep.GetBool() {
+		t.Fatal("unexpected keep flag: false")
+	}
+}
+
+func TestEncodeIMSubscribeAttributeRequestFabricFiltered(t *testing.T) {
+	encoded := EncodeIMSubscribeAttributeRequest(1, 0x6, 0, WithFabricFiltered(true))
+	_, decoded := decodeInteractionMessage(t, encoded)
+
+	fabricFiltered := decoded.GetItemRec([]int{7})
+	if fabricFiltered == nil {
+		t.Fatal("fabric filtered flag missing")
+	}
+	if !fabricFiltered.GetBool() {
+		t.Fatal("unexpected fabric filtered flag: false")
+	}
 }
