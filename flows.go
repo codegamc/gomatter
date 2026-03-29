@@ -17,11 +17,9 @@ import (
 // This uses SPAKE2+ protocol
 func Spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
-	secure_channel := SecureChannel{
-		Udp:     udp,
-		session: 0,
-		Counter: uint32(randm.Intn(0xffffffff)),
-	}
+	secure_channel := newSecureChannel(udp)
+	secure_channel.session = 0
+	secure_channel.Counter = uint32(randm.Intn(0xffffffff))
 
 	pbkdf_request := pBKDFParamRequest(exchange)
 	secure_channel.Send(pbkdf_request)
@@ -82,14 +80,12 @@ func Spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 		return SecureChannel{}, fmt.Errorf("pake3 is not success code: %d", status_report.StatusReport.ProtocolCode)
 	}
 
-	secure_channel = SecureChannel{
-		Udp:         udp,
-		decrypt_key: sctx.decrypt_key,
-		encrypt_key: sctx.encrypt_key,
-		remote_node: []byte{0, 0, 0, 0, 0, 0, 0, 0},
-		local_node:  []byte{0, 0, 0, 0, 0, 0, 0, 0},
-		session:     int(pbkdf_response_session),
-	}
+	secure_channel = newSecureChannel(udp)
+	secure_channel.decrypt_key = sctx.decrypt_key
+	secure_channel.encrypt_key = sctx.encrypt_key
+	secure_channel.remote_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	secure_channel.local_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	secure_channel.session = int(pbkdf_response_session)
 
 	return secure_channel, nil
 }
@@ -168,9 +164,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	if err != nil {
 		return err
 	}
-	secure_channel := SecureChannel{
-		Udp: channel,
-	}
+	secure_channel := newSecureChannel(channel)
 	defer secure_channel.Close()
 
 	secure_channel, err = Spake2pExchange(pin, channel)

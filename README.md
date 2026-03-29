@@ -69,6 +69,8 @@ go build -o gomat demo/main.go
   `./gomat cmd subscribe --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x101 1`
 - subscribe to an attribute report
   `./gomat cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
+  - subscription commands now default to low-latency intervals: `--min-interval=0 --max-interval=5`
+  - override them when needed, for example: `./gomat cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 --min-interval 0 --max-interval 1 1 0x6 0`
 
 
 ### how to use api
@@ -77,6 +79,8 @@ go build -o gomat demo/main.go
 - [Demo application](demo/main.go)
 
 For low-level subscriptions, use `EncodeIMSubscribeRequest` for event subscriptions and `EncodeIMSubscribeAttributeRequest` for attribute subscriptions.
+These now default to `minInterval=0` and `maxInterval=5` for lower-latency reporting.
+Use `EncodeIMSubscribeRequestWithIntervals` or `EncodeIMSubscribeAttributeRequestWithIntervals` to override the intervals explicitly.
 
 #### commission device using api
 create ca with root certificate, create admin user, then commission device:

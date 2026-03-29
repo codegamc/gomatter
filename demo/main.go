@@ -343,14 +343,31 @@ func test_subscribe(cmd *cobra.Command, args []string) {
 	endpoint, _ := strconv.ParseInt(args[0], 0, 16)
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	event, _ := strconv.ParseInt(args[2], 0, 16)
-	runSubscription(cmd, gomat.EncodeIMSubscribeRequest(uint16(endpoint), uint32(cluster), uint32(event)), "EVENT", eventReportDictionary)
+	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
+	runSubscription(cmd, gomat.EncodeIMSubscribeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(event), minInterval, maxInterval), "EVENT", eventReportDictionary)
 }
 
 func test_subscribe_attr(cmd *cobra.Command, args []string) {
 	endpoint, _ := strconv.ParseInt(args[0], 0, 16)
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	attr, _ := strconv.ParseInt(args[2], 0, 16)
-	runSubscription(cmd, gomat.EncodeIMSubscribeAttributeRequest(uint16(endpoint), uint32(cluster), uint32(attr)), "ATTRIBUTE", attributeReportDictionary)
+	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
+	runSubscription(cmd, gomat.EncodeIMSubscribeAttributeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(attr), minInterval, maxInterval), "ATTRIBUTE", attributeReportDictionary)
+}
+
+func subscriptionIntervalsFromCmd(cmd *cobra.Command) (uint16, uint16) {
+	minInterval, err := cmd.Flags().GetUint16("min-interval")
+	if err != nil {
+		panic(err)
+	}
+	maxInterval, err := cmd.Flags().GetUint16("max-interval")
+	if err != nil {
+		panic(err)
+	}
+	if maxInterval < minInterval {
+		panic("max-interval must be greater than or equal to min-interval")
+	}
+	return minInterval, maxInterval
 }
 
 func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dictionary map[string]string) {
@@ -377,9 +394,8 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 	sr := gomat.EncodeIMStatusResponse(resp.ProtocolHeader.ExchangeId, 1)
 	channel.Send(sr)
 	for {
-		r, err := channel.Receive()
+		r, err := channel.ReceiveBlocking()
 		if err != nil {
-			log.Println("it is ok to see timeout on following line")
 			log.Println(err)
 			continue
 		}
@@ -683,18 +699,24 @@ func main() {
 		Args: cobra.MinimumNArgs(3),
 	})
 
-	commandCmd.AddCommand(&cobra.Command{
+	subscribeCmd := &cobra.Command{
 		Use:     "subscribe [endpoint] [cluster] [event]",
 		Example: "subscribe 1 0x101 1",
 		Run:     test_subscribe,
 		Args:    cobra.MinimumNArgs(3),
-	})
-	commandCmd.AddCommand(&cobra.Command{
+	}
+	subscribeCmd.Flags().Uint16("min-interval", 0, "minimum seconds between reports")
+	subscribeCmd.Flags().Uint16("max-interval", 5, "maximum seconds between reports")
+	commandCmd.AddCommand(subscribeCmd)
+	subscribeAttrCmd := &cobra.Command{
 		Use:     "subscribe-attr [endpoint] [cluster] [attribute]",
 		Example: "subscribe-attr 1 0x6 0",
 		Run:     test_subscribe_attr,
 		Args:    cobra.MinimumNArgs(3),
-	})
+	}
+	subscribeAttrCmd.Flags().Uint16("min-interval", 0, "minimum seconds between reports")
+	subscribeAttrCmd.Flags().Uint16("max-interval", 5, "maximum seconds between reports")
+	commandCmd.AddCommand(subscribeAttrCmd)
 
 	rootCmd.AddCommand(commandCmd)
 

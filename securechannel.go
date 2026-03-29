@@ -54,13 +54,23 @@ func make_nonce3(counter uint32, node []byte) []byte {
 }
 
 type SecureChannel struct {
-	Udp         *udpChannel
-	encrypt_key []byte
-	decrypt_key []byte
-	remote_node []byte
-	local_node  []byte
-	Counter     uint32
-	session     int
+	Udp            *udpChannel
+	encrypt_key    []byte
+	decrypt_key    []byte
+	remote_node    []byte
+	local_node     []byte
+	Counter        uint32
+	session        int
+	receiveTimeout time.Duration
+}
+
+const defaultReceiveTimeout = 3 * time.Second
+
+func newSecureChannel(udp *udpChannel) SecureChannel {
+	return SecureChannel{
+		Udp:            udp,
+		receiveTimeout: defaultReceiveTimeout,
+	}
 }
 
 // StartSecureChannel initializes secure channel for plain unencrypted communication.
@@ -71,14 +81,35 @@ func StartSecureChannel(remote_ip net.IP, remote_port, local_port int) (SecureCh
 	if err != nil {
 		return SecureChannel{}, err
 	}
-	return SecureChannel{
-		Udp:     udp,
-		Counter: uint32(rand.Intn(0xffffffff)),
-	}, nil
+	sc := newSecureChannel(udp)
+	sc.Counter = uint32(rand.Intn(0xffffffff))
+	return sc, nil
 }
 
 func (sc *SecureChannel) Receive() (DecodedGeneric, error) {
-	sc.Udp.Udp.SetReadDeadline(time.Now().Add(time.Second * 3))
+	return sc.ReceiveWithTimeout(sc.receiveTimeout)
+}
+
+func (sc *SecureChannel) ReceiveWithTimeout(timeout time.Duration) (DecodedGeneric, error) {
+	var deadline time.Time
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
+	}
+	if err := sc.Udp.Udp.SetReadDeadline(deadline); err != nil {
+		return DecodedGeneric{}, err
+	}
+	return sc.receive()
+}
+
+func (sc *SecureChannel) ReceiveBlocking() (DecodedGeneric, error) {
+	return sc.ReceiveWithTimeout(0)
+}
+
+func (sc *SecureChannel) SetReceiveTimeout(timeout time.Duration) {
+	sc.receiveTimeout = timeout
+}
+
+func (sc *SecureChannel) receive() (DecodedGeneric, error) {
 	data, err := sc.Udp.receive()
 	if err != nil {
 		return DecodedGeneric{}, err
@@ -125,7 +156,7 @@ func (sc *SecureChannel) Receive() (DecodedGeneric, error) {
 
 	if out.ProtocolHeader.ProtocolId == 0 {
 		if out.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_ACK { // standalone ack
-			return sc.Receive()
+			return sc.receive()
 		}
 	}
 
