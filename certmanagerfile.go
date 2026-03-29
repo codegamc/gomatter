@@ -1,4 +1,4 @@
-package gomat
+package gomatter
 
 // requirements:
 // - create, manage, own CA certificate and private key

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/codegamc/gomatter"
+	gomatter "github.com/codegamc/gomatter"
 	"github.com/codegamc/gomatter/discover"
 	"github.com/codegamc/gomatter/mattertlv"
 	"github.com/codegamc/gomatter/onboarding_payload"
@@ -54,14 +54,14 @@ func command_list_fabrics(cmd *cobra.Command) {
 		panic(err)
 	}
 
-	to_send := gomat.EncodeIMReadRequest(0, 0x3e, 1)
+	to_send := gomatter.EncodeIMReadRequest(0, 0x3e, 1)
 	channel.Send(to_send)
 
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -117,14 +117,14 @@ func command_list_device_types(cmd *cobra.Command) {
 		panic(err)
 	}
 
-	to_send := gomat.EncodeIMReadRequest(0, symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_DeviceTypeList)
+	to_send := gomatter.EncodeIMReadRequest(0, symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_DeviceTypeList)
 	channel.Send(to_send)
 
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -158,14 +158,14 @@ func command_list_supported_clusters(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	to_send := gomat.EncodeIMReadRequest(uint16(endpoint), symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_ServerList)
+	to_send := gomatter.EncodeIMReadRequest(uint16(endpoint), symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_ServerList)
 	channel.Send(to_send)
 
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -201,14 +201,14 @@ func command_list_interfaces(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	to_send := gomat.EncodeIMReadRequest(0, symbols.CLUSTER_ID_GeneralDiagnostics, symbols.ATTRIBUTE_ID_GeneralDiagnostics_NetworkInterfaces)
+	to_send := gomatter.EncodeIMReadRequest(0, symbols.CLUSTER_ID_GeneralDiagnostics, symbols.ATTRIBUTE_ID_GeneralDiagnostics_NetworkInterfaces)
 	channel.Send(to_send)
 
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 	dict := map[string]string{
@@ -249,14 +249,14 @@ func command_get_logs(cmd *cobra.Command, args []string) {
 	tlv.WriteUInt8(0, 0) // intent
 	tlv.WriteUInt8(1, 0)
 
-	to_send := gomat.EncodeIMInvokeRequest(uint16(endpoint), symbols.CLUSTER_ID_DiagnosticLogs, symbols.COMMAND_ID_DiagnosticLogs_RetrieveLogsRequest, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
+	to_send := gomatter.EncodeIMInvokeRequest(uint16(endpoint), symbols.CLUSTER_ID_DiagnosticLogs, symbols.COMMAND_ID_DiagnosticLogs_RetrieveLogsRequest, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 	channel.Send(to_send)
 
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeInvokeRsp {
 		panic("did not receive report data message")
 	}
 
@@ -274,9 +274,9 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	salt := gomat.CreateRandomBytes(32)
+	salt := gomatter.CreateRandomBytes(32)
 	iterations := 1000
-	sctx := gomat.NewSpakeCtx()
+	sctx := gomatter.NewSpakeCtx()
 	sctx.GenerateW(int(pin), salt, iterations)
 	sctx.GenerateRandomX()
 	sctx.GenerateRandomY()
@@ -293,13 +293,13 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	tlv.WriteOctetString(4, salt)          // salt
 
 	var exchange uint16 = uint16(rand.Intn(0xffff))
-	to_send := gomat.EncodeIMTimedRequest(exchange, 6000)
+	to_send := gomatter.EncodeIMTimedRequest(exchange, 6000)
 	channel.Send(to_send)
 	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode == gomat.InteractionOpcodeStatusRsp {
+	if resp.ProtocolHeader.Opcode == gomatter.InteractionOpcodeStatusRsp {
 		status := resp.Tlv.GetItemWithTag(0)
 		if status != nil {
 			if status.GetInt() != 0 {
@@ -313,7 +313,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 		panic("unexpected opcode")
 	}
 
-	to_send = gomat.EncodeIMInvokeRequest(0, symbols.CLUSTER_ID_AdministratorCommissioning, symbols.COMMAND_ID_AdministratorCommissioning_OpenCommissioningWindow, tlv.Bytes(), true, exchange)
+	to_send = gomatter.EncodeIMInvokeRequest(0, symbols.CLUSTER_ID_AdministratorCommissioning, symbols.COMMAND_ID_AdministratorCommissioning_OpenCommissioningWindow, tlv.Bytes(), true, exchange)
 	channel.Send(to_send)
 
 	resp, err = channel.Receive(context.Background())
@@ -321,11 +321,11 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeInvokeRsp {
 		panic("did not receive report data message")
 	}
 
-	final_result, err := gomat.ParseImInvokeResponse(&resp.Tlv)
+	final_result, err := gomatter.ParseImInvokeResponse(&resp.Tlv)
 	if err != nil {
 		log.Printf("failed to parse response: %v\n", err)
 	}
@@ -348,7 +348,7 @@ func test_subscribe(cmd *cobra.Command, args []string) {
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	event, _ := strconv.ParseInt(args[2], 0, 16)
 	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
-	runSubscription(cmd, gomat.EncodeIMSubscribeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(event), minInterval, maxInterval), "EVENT", eventReportDictionary)
+	runSubscription(cmd, gomatter.EncodeIMSubscribeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(event), minInterval, maxInterval), "EVENT", eventReportDictionary)
 }
 
 func test_subscribe_attr(cmd *cobra.Command, args []string) {
@@ -356,7 +356,7 @@ func test_subscribe_attr(cmd *cobra.Command, args []string) {
 	cluster, _ := strconv.ParseInt(args[1], 0, 16)
 	attr, _ := strconv.ParseInt(args[2], 0, 16)
 	minInterval, maxInterval := subscriptionIntervalsFromCmd(cmd)
-	runSubscription(cmd, gomat.EncodeIMSubscribeAttributeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(attr), minInterval, maxInterval), "ATTRIBUTE", attributeReportDictionary)
+	runSubscription(cmd, gomatter.EncodeIMSubscribeAttributeRequestWithIntervals(uint16(endpoint), uint32(cluster), uint32(attr), minInterval, maxInterval), "ATTRIBUTE", attributeReportDictionary)
 }
 
 func subscriptionIntervalsFromCmd(cmd *cobra.Command) (uint16, uint16) {
@@ -388,14 +388,14 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
+	if resp.ProtocolHeader.Opcode != gomatter.InteractionOpcodeReportData {
 		log.Println("unexpected message")
 		resp.ProtocolHeader.Dump()
 		panic("did not receive report data message")
 	}
 	resp.Tlv.DumpWithDict(0, "", dictionary)
 
-	sr := gomat.EncodeIMStatusResponse(resp.ProtocolHeader.ExchangeId, 1)
+	sr := gomatter.EncodeIMStatusResponse(resp.ProtocolHeader.ExchangeId, 1)
 	channel.Send(sr)
 	for {
 		r, err := channel.ReceiveBlocking()
@@ -403,18 +403,18 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 			log.Println(err)
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeSubscRsp {
+		if r.ProtocolHeader.Opcode == gomatter.InteractionOpcodeSubscRsp {
 			log.Println("subscribe response")
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeStatusRsp {
+		if r.ProtocolHeader.Opcode == gomatter.InteractionOpcodeStatusRsp {
 			log.Println("status response")
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeReportData {
+		if r.ProtocolHeader.Opcode == gomatter.InteractionOpcodeReportData {
 			fmt.Printf("%s:\n", reportLabel)
 			r.Tlv.DumpWithDict(0, "", dictionary)
-			sr = gomat.EncodeIMStatusResponse(r.ProtocolHeader.ExchangeId, 0)
+			sr = gomatter.EncodeIMStatusResponse(r.ProtocolHeader.ExchangeId, 0)
 			channel.Send(sr)
 		} else {
 			log.Printf("unexpected opcode %x\n", r.ProtocolHeader.Opcode)
@@ -423,17 +423,17 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 	}
 }
 
-func createBasicFabric(id uint64) *gomat.Fabric {
-	cert_manager := gomat.NewFileCertManager(id, gomat.FileCertManagerConfig{})
+func createBasicFabric(id uint64) *gomatter.Fabric {
+	cert_manager := gomatter.NewFileCertManager(id, gomatter.FileCertManagerConfig{})
 	err := cert_manager.Load()
 	if err != nil {
 		panic(err)
 	}
-	fabric := gomat.NewFabric(id, cert_manager)
+	fabric := gomatter.NewFabric(id, cert_manager)
 	return fabric
 }
 
-func createBasicFabricFromCmd(cmd *cobra.Command) *gomat.Fabric {
+func createBasicFabricFromCmd(cmd *cobra.Command) *gomatter.Fabric {
 	fabricIDStr, _ := cmd.Flags().GetString("fabric")
 	id, err := strconv.ParseUint(fabricIDStr, 0, 64)
 	if err != nil {
@@ -442,12 +442,12 @@ func createBasicFabricFromCmd(cmd *cobra.Command) *gomat.Fabric {
 	return createBasicFabric(id)
 }
 
-func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (*gomat.SecureChannel, error) {
+func connectDeviceFromCmd(fabric *gomatter.Fabric, cmd *cobra.Command) (*gomatter.SecureChannel, error) {
 	ip, _ := cmd.Flags().GetString("ip")
 	deviceID, _ := cmd.Flags().GetUint64("device-id")
 	controllerID, _ := cmd.Flags().GetUint64("controller-id")
 
-	return gomat.ConnectDevice(context.Background(), net.ParseIP(ip), 5540, fabric, deviceID, controllerID)
+	return gomatter.ConnectDevice(context.Background(), net.ParseIP(ip), 5540, fabric, deviceID, controllerID)
 }
 
 var eventReportDictionary = map[string]string{
@@ -496,7 +496,7 @@ var attributeReportDictionary = map[string]string{
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "gomat",
+		Use:   "gomatter",
 		Short: "matter manager",
 	}
 	rootCmd.PersistentFlags().StringP("fabric", "f", "0x110", "fabric identifier")
@@ -555,7 +555,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			to_send := gomat.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_Off, []byte{}, false, uint16(rand.Intn(0xffff)))
+			to_send := gomatter.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_Off, []byte{}, false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
 			resp, err := channel.Receive(context.Background())
@@ -578,7 +578,7 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			to_send := gomat.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_On, []byte{}, false, uint16(rand.Intn(0xffff)))
+			to_send := gomatter.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_On, []byte{}, false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
 			resp, err := channel.Receive(context.Background())
@@ -617,7 +617,7 @@ func main() {
 			tlv.WriteUInt8(0, byte(hue))        // hue
 			tlv.WriteUInt8(1, byte(saturation)) // saturation
 			tlv.WriteUInt8(2, byte(time))       // time
-			to_send := gomat.EncodeIMInvokeRequest(1, 0x300, 6, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
+			to_send := gomatter.EncodeIMInvokeRequest(1, 0x300, 6, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
 			resp, err := channel.Receive(context.Background())
@@ -654,7 +654,7 @@ func main() {
 				}
 			}
 			tlv.WriteOctetString(0, b.Bytes())
-			to_send := gomat.EncodeIMInvokeRequest(2, 0x1312fc03, 0x13120007, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
+			to_send := gomatter.EncodeIMInvokeRequest(2, 0x1312fc03, 0x13120007, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
 			resp, err := channel.Receive(context.Background())
@@ -682,15 +682,15 @@ func main() {
 			cluster, _ := strconv.ParseInt(args[1], 0, 16)
 			attr, _ := strconv.ParseInt(args[2], 0, 16)
 
-			to_send := gomat.EncodeIMReadRequest(uint16(endpoint), uint32(cluster), uint32(attr))
+			to_send := gomatter.EncodeIMReadRequest(uint16(endpoint), uint32(cluster), uint32(attr))
 			channel.Send(to_send)
 
 			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
-			if (resp.ProtocolHeader.ProtocolId == gomat.ProtocolIdInteraction) &&
-				(resp.ProtocolHeader.Opcode == gomat.InteractionOpcodeReportData) {
+			if (resp.ProtocolHeader.ProtocolId == gomatter.ProtocolIdInteraction) &&
+				(resp.ProtocolHeader.Opcode == gomatter.InteractionOpcodeReportData) {
 				resp.Tlv.Dump(0)
 			}
 			channel.Close()
@@ -738,7 +738,7 @@ func main() {
 				return fmt.Errorf("invalid passcode %q: %w", pin, err)
 			}
 			//commission(fabric, discover_with_qr(qr).addrs[1], 123456)
-			err = gomat.Commission(context.Background(), fabric, net.ParseIP(ip), pinn, controllerID, deviceID)
+			err = gomatter.Commission(context.Background(), fabric, net.ParseIP(ip), pinn, controllerID, deviceID)
 			if err != nil {
 				if strings.Contains(err.Error(), "pake3 is not success code: 2") {
 					normalizedPin := strings.ReplaceAll(pin, "-", "")
@@ -746,7 +746,7 @@ func main() {
 						pairingCode := onboarding_payload.DecodeManualPairingCode(pin)
 						passcode := pairingCode.Passcode
 						fmt.Printf("commissioning note: --pin=%q looks like a manual pairing code; retrying with decoded setup passcode %d\n", pin, passcode)
-						retryErr := gomat.Commission(context.Background(), fabric, net.ParseIP(ip), int(passcode), controllerID, deviceID)
+						retryErr := gomatter.Commission(context.Background(), fabric, net.ParseIP(ip), int(passcode), controllerID, deviceID)
 						if retryErr == nil {
 							fmt.Printf("commissioning note: automatic retry with decoded setup passcode %d succeeded\n", passcode)
 							err = nil
@@ -811,7 +811,7 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("invalid fabric id %s", fabricIDStr))
 			}
-			cm := gomat.NewFileCertManager(id, gomat.FileCertManagerConfig{})
+			cm := gomatter.NewFileCertManager(id, gomatter.FileCertManagerConfig{})
 			err = cm.BootstrapCa()
 			if err != nil {
 				panic(err)

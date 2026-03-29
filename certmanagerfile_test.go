@@ -1,4 +1,4 @@
-package gomat
+package gomatter
 
 import (
 	"errors"

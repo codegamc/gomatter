@@ -12,13 +12,13 @@ import (
 	"math/rand"
 	"net"
 
-	"github.com/codegamc/gomatter"
+	gomatter "github.com/codegamc/gomatter"
 	"github.com/codegamc/gomatter/mattertlv"
 	"github.com/codegamc/gomatter/symbols"
 )
 
 func bootstrapCA(fabricID, adminUser uint64) {
-	cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.BootstrapCa()
 	cm.Load()
 	if err := cm.CreateUser(adminUser); err != nil {
@@ -26,21 +26,21 @@ func bootstrapCA(fabricID, adminUser uint64) {
 	}
 }
 
-func loadFabric(fabricID uint64) *gomat.Fabric {
-	cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+func loadFabric(fabricID uint64) *gomatter.Fabric {
+	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.Load()
-	return gomat.NewFabric(fabricID, cm)
+	return gomatter.NewFabric(fabricID, cm)
 }
 
 func commission(fabricID, adminUser, deviceID uint64, deviceIP string, pin int) {
 	fabric := loadFabric(fabricID)
-	if err := gomat.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID); err != nil {
+	if err := gomatter.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID); err != nil {
 		panic(err)
 	}
 }
 
-func sendOnCommand(secureChannel *gomat.SecureChannel) {
-	onCommand := gomat.EncodeIMInvokeRequest(
+func sendOnCommand(secureChannel *gomatter.SecureChannel) {
+	onCommand := gomatter.EncodeIMInvokeRequest(
 		1,                           // endpoint
 		symbols.CLUSTER_ID_OnOff,    // api cluster (on/off)
 		symbols.COMMAND_ID_OnOff_On, // on command
@@ -54,21 +54,21 @@ func sendOnCommand(secureChannel *gomat.SecureChannel) {
 	if err != nil {
 		panic(err)
 	}
-	if response.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
+	if response.ProtocolHeader.Opcode != gomatter.InteractionOpcodeInvokeRsp {
 		panic("unexpected message")
 	}
-	if status, err := gomat.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
+	if status, err := gomatter.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
 		response.Tlv.Dump(0)
 		panic("response was not OK")
 	}
 }
 
-func sendColorCommand(secureChannel *gomat.SecureChannel) {
+func sendColorCommand(secureChannel *gomatter.SecureChannel) {
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteUInt8(0, 100) // hue
 	tlv.WriteUInt8(1, 200) // saturation
 	tlv.WriteUInt8(2, 10)  // time
-	colorCommand := gomat.EncodeIMInvokeRequest(
+	colorCommand := gomatter.EncodeIMInvokeRequest(
 		1,                               // endpoint
 		symbols.CLUSTER_ID_ColorControl, // color control cluster
 		symbols.COMMAND_ID_ColorControl_MoveToHueAndSaturation,
@@ -82,10 +82,10 @@ func sendColorCommand(secureChannel *gomat.SecureChannel) {
 	if err != nil {
 		panic(err)
 	}
-	if response.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
+	if response.ProtocolHeader.Opcode != gomatter.InteractionOpcodeInvokeRsp {
 		panic("unexpected message")
 	}
-	if status, err := gomat.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
+	if status, err := gomatter.ParseImInvokeResponse(&response.Tlv); err != nil || status != 0 {
 		response.Tlv.Dump(0)
 		panic("response was not OK")
 	}
@@ -108,7 +108,7 @@ func main() {
 
 	// connect to commissioned device
 	fabric := loadFabric(fabricID)
-	secureChannel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
+	secureChannel, err := gomatter.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
 	if err != nil {
 		panic(err)
 	}

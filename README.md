@@ -104,12 +104,12 @@ func main() {
   deviceIP := "192.168.5.178"
   pin := 123456
 
-  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+  cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.BootstrapCa()
   cm.Load()
   cm.CreateUser(adminUser)
-  fabric := gomat.NewFabric(fabricID, cm)
-  gomat.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID)
+  fabric := gomatter.NewFabric(fabricID, cm)
+  gomatter.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID)
 }
 ```
 
@@ -131,17 +131,17 @@ func main() {
   var deviceID uint64 = 10
   deviceIP := "192.168.5.178"
 
-  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+  cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomat.NewFabric(fabricID, cm)
+  fabric := gomatter.NewFabric(fabricID, cm)
 
-  secureChannel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
+  secureChannel, err := gomatter.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
   if err != nil {
     panic(err)
   }
   defer secureChannel.Close()
 
-  on_command := gomat.EncodeInvokeCommand(1,        // endpoint
+  on_command := gomatter.EncodeInvokeCommand(1,        // endpoint
                                           6,        // api cluster (on/off)
                                           1,        // on command
                                           []byte{}, // no extra data
@@ -177,9 +177,9 @@ func main() {
   var deviceID uint64 = 10
 
 
-  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+  cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomat.NewFabric(fabricID, cm)
+  fabric := gomatter.NewFabric(fabricID, cm)
 
   identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(fabric.CompressedFabric()), deviceID)
   identifier = strings.ToUpper(identifier)
@@ -238,12 +238,12 @@ func main() {
 	var deviceID uint64 = 10
 	deviceIP := "192.168.5.178"
 
-	cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
+	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.Load()
-	fabric := gomat.NewFabric(fabricID, cm)
+	fabric := gomatter.NewFabric(fabricID, cm)
 
 
-	secureChannel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
+	secureChannel, err := gomatter.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
 	if err != nil {
 		panic(err)
 	}
@@ -253,7 +253,7 @@ func main() {
 	tlv.WriteUInt8(0, byte(hue))        // hue
 	tlv.WriteUInt8(1, byte(saturation)) // saturation
 	tlv.WriteUInt8(2, byte(time))       // time
-	to_send := gomat.EncodeInvokeCommand(1, 0x300, 6, tlv.Bytes())
+	to_send := gomatter.EncodeInvokeCommand(1, 0x300, 6, tlv.Bytes())
 	secureChannel.Send(to_send)
 
 	resp, err := secureChannel.Receive(context.Background())
