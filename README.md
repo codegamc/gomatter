@@ -23,6 +23,8 @@ The goal is to create golang library and supporting tools to access matter devic
 #### tested devices
 - tested against virtual devices which are part of reference implementation https://github.com/project-chip/connectedhomeip
 - tested with yeelight cube
+- tested with Tapo Devices:
+-- VID: 5010, PID: 261
 
 ### general info
 - it is best to understand matter to use this, but here is most important info:
