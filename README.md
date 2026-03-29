@@ -85,6 +85,8 @@ For low-level subscriptions, use `EncodeIMSubscribeRequest` for event subscripti
 These now default to `minInterval=0` and `maxInterval=5` for lower-latency reporting.
 Use `EncodeIMSubscribeRequestWithIntervals` or `EncodeIMSubscribeAttributeRequestWithIntervals` to override the intervals explicitly.
 
+`NewFabric` requires a caller-provided 16-byte IPK. You can create one with `GenerateIPK()`, but if you need to reload an existing fabric you must persist and reuse the same IPK yourself.
+
 #### commission device using api
 create ca with root certificate, create admin user, then commission device:
 ```
@@ -104,12 +106,19 @@ func main() {
   var deviceID uint64 = 10
   deviceIP := "192.168.5.178"
   pin := 123456
+  ipk, err := gomatter.GenerateIPK()
+  if err != nil {
+    panic(err)
+  }
 
   cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.BootstrapCa()
   cm.Load()
   cm.CreateUser(adminUser)
-  fabric := gomatter.NewFabric(fabricID, cm)
+  fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
+  if err != nil {
+    panic(err)
+  }
   gomatter.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID)
 }
 ```
@@ -131,10 +140,17 @@ func main() {
   var adminUser uint64 = 5
   var deviceID uint64 = 10
   deviceIP := "192.168.5.178"
+  ipk, err := gomatter.GenerateIPK()
+  if err != nil {
+    panic(err)
+  }
 
   cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomatter.NewFabric(fabricID, cm)
+  fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
+  if err != nil {
+    panic(err)
+  }
 
   secureChannel, err := gomatter.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
   if err != nil {
@@ -176,11 +192,18 @@ import (
 func main() {
   var fabricID uint64 = 0x100
   var deviceID uint64 = 10
+  ipk, err := gomatter.GenerateIPK()
+  if err != nil {
+    panic(err)
+  }
 
 
   cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomatter.NewFabric(fabricID, cm)
+  fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
+  if err != nil {
+    panic(err)
+  }
 
   identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(fabric.CompressedFabric()), deviceID)
   identifier = strings.ToUpper(identifier)
@@ -238,10 +261,17 @@ func main() {
 	var adminUser uint64 = 5
 	var deviceID uint64 = 10
 	deviceIP := "192.168.5.178"
+	ipk, err := gomatter.GenerateIPK()
+	if err != nil {
+		panic(err)
+	}
 
 	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.Load()
-	fabric := gomatter.NewFabric(fabricID, cm)
+	fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
+	if err != nil {
+		panic(err)
+	}
 
 
 	secureChannel, err := gomatter.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)

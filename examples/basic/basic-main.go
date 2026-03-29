@@ -2,8 +2,10 @@
 // - create fabric (generate CA certificate)
 // - commission device (upload certificates to it)
 // - send commands to device
-// devica parameters (ip address and passcode) are hardcoded in main function
+// device parameters (ip address and passcode) are hardcoded in main function
 // this example assumes that device is in state accepting new commissioning
+// This example also hard-codes the IPK so it can reload an existing fabric.
+// Real callers should persist and pass their own IPK.
 
 package main
 
@@ -17,6 +19,8 @@ import (
 	"github.com/codegamc/gomatter/symbols"
 )
 
+var demoIPK = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf}
+
 func bootstrapCA(fabricID, adminUser uint64) {
 	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.BootstrapCa()
@@ -29,7 +33,11 @@ func bootstrapCA(fabricID, adminUser uint64) {
 func loadFabric(fabricID uint64) *gomatter.Fabric {
 	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.Load()
-	return gomatter.NewFabric(fabricID, cm)
+	fabric, err := gomatter.NewFabric(fabricID, cm, demoIPK)
+	if err != nil {
+		panic(err)
+	}
+	return fabric
 }
 
 func commission(fabricID, adminUser, deviceID uint64, deviceIP string, pin int) {
