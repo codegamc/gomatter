@@ -15,7 +15,7 @@ import (
 
 // spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).
 // This uses SPAKE2+ protocol
-func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
+func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
 	secure_channel := newSecureChannel(udp)
 	secure_channel.session = 0
@@ -26,19 +26,19 @@ func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 
 	pbkdf_responseS, err := secure_channel.Receive()
 	if err != nil {
-		return SecureChannel{}, fmt.Errorf("pbkdf response not received: %s", err.Error())
+		return nil, fmt.Errorf("pbkdf response not received: %s", err.Error())
 	}
 	if pbkdf_responseS.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_PBKDF_RESP {
-		return SecureChannel{}, fmt.Errorf("SEC_CHAN_OPCODE_PBKDF_RESP not received")
+		return nil, fmt.Errorf("SEC_CHAN_OPCODE_PBKDF_RESP not received")
 	}
 	pbkdf_response_salt := pbkdf_responseS.Tlv.GetOctetStringRec([]int{4, 2})
 	pbkdf_response_iterations, err := pbkdf_responseS.Tlv.GetIntRec([]int{4, 1})
 	if err != nil {
-		return SecureChannel{}, fmt.Errorf("can't get pbkdf_response_iterations")
+		return nil, fmt.Errorf("can't get pbkdf_response_iterations")
 	}
 	pbkdf_response_session, err := pbkdf_responseS.Tlv.GetIntRec([]int{3})
 	if err != nil {
-		return SecureChannel{}, fmt.Errorf("can't get pbkdf_response_session")
+		return nil, fmt.Errorf("can't get pbkdf_response_session")
 	}
 
 	sctx := NewSpakeCtx()
@@ -51,10 +51,10 @@ func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 
 	pake2s, err := secure_channel.Receive()
 	if err != nil {
-		return SecureChannel{}, fmt.Errorf("pake2 not received: %s", err.Error())
+		return nil, fmt.Errorf("pake2 not received: %s", err.Error())
 	}
 	if pake2s.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_PAKE2 {
-		return SecureChannel{}, fmt.Errorf("SEC_CHAN_OPCODE_PAKE2 not received")
+		return nil, fmt.Errorf("SEC_CHAN_OPCODE_PAKE2 not received")
 	}
 	//pake2s.tlv.Dump(1)
 	pake2_pb := pake2s.Tlv.GetOctetStringRec([]int{1})
@@ -66,7 +66,7 @@ func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 	ttseed = append(ttseed, pbkdf_responseS.Payload...)
 	err = sctx.calc_hash(ttseed)
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 
 	pake3 := pake3ParamRequest(exchange, sctx.cA)
@@ -74,10 +74,10 @@ func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 
 	status_report, err := secure_channel.Receive()
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	if status_report.StatusReport.ProtocolCode != 0 {
-		return SecureChannel{}, fmt.Errorf("pake3 is not success code: %d", status_report.StatusReport.ProtocolCode)
+		return nil, fmt.Errorf("pake3 is not success code: %d", status_report.StatusReport.ProtocolCode)
 	}
 
 	secure_channel = newSecureChannel(udp)
@@ -91,7 +91,7 @@ func spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 }
 
 // SigmaExhange establishes secure session using CASE (Certificate Authenticated Session Establishment)
-func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secure_channel SecureChannel) (SecureChannel, error) {
+func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secure_channel *SecureChannel) (*SecureChannel, error) {
 
 	controller_privkey, _ := ecdh.P256().GenerateKey(rand.Reader)
 	sigma_context := sigmaContext{
@@ -105,42 +105,42 @@ func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secur
 	var err error
 	sigma_context.sigma2dec, err = secure_channel.Receive()
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	if (sigma_context.sigma2dec.ProtocolHeader.ProtocolId == ProtocolIdSecureChannel) &&
 		(sigma_context.sigma2dec.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_STATUS_REP) {
-		return SecureChannel{}, fmt.Errorf("sigma2 not received. status: %x %x", sigma_context.sigma2dec.StatusReport.GeneralCode,
+		return nil, fmt.Errorf("sigma2 not received. status: %x %x", sigma_context.sigma2dec.StatusReport.GeneralCode,
 			sigma_context.sigma2dec.StatusReport.ProtocolCode)
 	}
 	if sigma_context.sigma2dec.ProtocolHeader.Opcode != 0x31 {
-		return SecureChannel{}, fmt.Errorf("sigma2 not received")
+		return nil, fmt.Errorf("sigma2 not received")
 	}
 
 	sigma_context.controller_key, err = fabric.CertificateManager.GetPrivkey(controller_id)
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	controller_cert, err := fabric.CertificateManager.GetCertificate(controller_id)
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	sigma_context.controller_matter_certificate = SerializeCertificateIntoMatter(fabric, controller_cert)
 
 	to_send, err := sigma_context.sigma3(fabric)
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	secure_channel.Send(to_send)
 
 	sigma_result, err := secure_channel.Receive()
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	if sigma_result.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_STATUS_REP {
-		return SecureChannel{}, fmt.Errorf("unexpected message (opcode:0x%x)", sigma_result.ProtocolHeader.Opcode)
+		return nil, fmt.Errorf("unexpected message (opcode:0x%x)", sigma_result.ProtocolHeader.Opcode)
 	}
 	if !sigma_result.StatusReport.IsOk() {
-		return SecureChannel{}, fmt.Errorf("sigma result is not ok %d %d %d",
+		return nil, fmt.Errorf("sigma result is not ok %d %d %d",
 			sigma_result.StatusReport.GeneralCode,
 			sigma_result.StatusReport.ProtocolId, sigma_result.StatusReport.ProtocolCode)
 	}
@@ -266,14 +266,14 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	return nil
 }
 
-func ConnectDevice(device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64) (SecureChannel, error) {
-	var secure_channel SecureChannel
+func ConnectDevice(device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64) (*SecureChannel, error) {
+	var secure_channel *SecureChannel
 	var err error
 	if secure_channel, err = StartSecureChannel(device_ip, port, 55555); err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	if secure_channel, err = SigmaExchange(fabric, admin_id, device_id, secure_channel); err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	return secure_channel, nil
 }

@@ -66,8 +66,8 @@ type SecureChannel struct {
 
 const defaultReceiveTimeout = 3 * time.Second
 
-func newSecureChannel(udp *udpChannel) SecureChannel {
-	return SecureChannel{
+func newSecureChannel(udp *udpChannel) *SecureChannel {
+	return &SecureChannel{
 		Udp:            udp,
 		receiveTimeout: defaultReceiveTimeout,
 	}
@@ -76,10 +76,10 @@ func newSecureChannel(udp *udpChannel) SecureChannel {
 // StartSecureChannel initializes secure channel for plain unencrypted communication.
 // It initializes UDP interface and blocks local udp port.
 // Secure channel becomes encrypted after encryption keys are supplied.
-func StartSecureChannel(remote_ip net.IP, remote_port, local_port int) (SecureChannel, error) {
+func StartSecureChannel(remote_ip net.IP, remote_port, local_port int) (*SecureChannel, error) {
 	udp, err := startUdpChannel(remote_ip, remote_port, local_port)
 	if err != nil {
-		return SecureChannel{}, err
+		return nil, err
 	}
 	sc := newSecureChannel(udp)
 	sc.Counter = uint32(rand.Intn(0xffffffff))

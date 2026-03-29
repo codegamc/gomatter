@@ -438,7 +438,7 @@ func createBasicFabricFromCmd(cmd *cobra.Command) *gomat.Fabric {
 	return createBasicFabric(id)
 }
 
-func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (gomat.SecureChannel, error) {
+func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (*gomat.SecureChannel, error) {
 	ip, _ := cmd.Flags().GetString("ip")
 	device_id, _ := cmd.Flags().GetUint64("device-id")
 	controller_id, _ := cmd.Flags().GetUint64("controller-id")

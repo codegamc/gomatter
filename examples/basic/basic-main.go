@@ -114,8 +114,8 @@ func main() {
 	defer secure_channel.Close()
 
 	// send ON command
-	sendOnCommand(&secure_channel)
+	sendOnCommand(secure_channel)
 
 	// send set color command
-	sendColorCommand(&secure_channel)
+	sendColorCommand(secure_channel)
 }
