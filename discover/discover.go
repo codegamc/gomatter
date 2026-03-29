@@ -207,9 +207,9 @@ func isEglible(iface net.Interface) bool {
 	return true
 }
 
-// DiscoverAllComissioned uses mdns to discover all matter devices which are already commissioned.
+// DiscoverAllCommissioned uses mdns to discover all matter devices which are already commissioned.
 // Name of these devices contains compressed fabric identifier and id of device in fabric.
-func DiscoverAllComissioned(interfac string, disableipv6 bool) []DiscoveredDevice {
+func DiscoverAllCommissioned(interfac string, disableipv6 bool) []DiscoveredDevice {
 	ifaces := ListInterfaces(interfac)
 	devices := map[string]DiscoveredDevice{}
 	for _, iface := range ifaces {
@@ -228,9 +228,17 @@ func DiscoverAllComissioned(interfac string, disableipv6 bool) []DiscoveredDevic
 	return out
 }
 
-// DiscoverComissioned uses mdns to discover concrete already commissioned matter device.
+// DiscoverAllComissioned uses mdns to discover all matter devices which are already commissioned.
+// Name of these devices contains compressed fabric identifier and id of device in fabric.
+//
+// Deprecated: use DiscoverAllCommissioned.
+func DiscoverAllComissioned(interfac string, disableipv6 bool) []DiscoveredDevice {
+	return DiscoverAllCommissioned(interfac, disableipv6)
+}
+
+// DiscoverCommissioned uses mdns to discover concrete already commissioned matter device.
 // It searches for device commissioned to current fabric with identifier id.
-func DiscoverComissioned(interfac string, disableipv6 bool, id string) []DiscoveredDevice {
+func DiscoverCommissioned(interfac string, disableipv6 bool, id string) []DiscoveredDevice {
 	ifaces := ListInterfaces(interfac)
 	devices := map[string]DiscoveredDevice{}
 	for _, iface := range ifaces {
@@ -252,8 +260,16 @@ func DiscoverComissioned(interfac string, disableipv6 bool, id string) []Discove
 	return out
 }
 
-// DiscoverAllComissionable uses mdns to discover all matter devices with open commissioning window
-func DiscoverAllComissionable(interfac string, disableipv6 bool) []DiscoveredDevice {
+// DiscoverComissioned uses mdns to discover concrete already commissioned matter device.
+// It searches for device commissioned to current fabric with identifier id.
+//
+// Deprecated: use DiscoverCommissioned.
+func DiscoverComissioned(interfac string, disableipv6 bool, id string) []DiscoveredDevice {
+	return DiscoverCommissioned(interfac, disableipv6, id)
+}
+
+// DiscoverAllCommissionable uses mdns to discover all matter devices with open commissioning window
+func DiscoverAllCommissionable(interfac string, disableipv6 bool) []DiscoveredDevice {
 	ifaces := ListInterfaces(interfac)
 	devices := map[string]DiscoveredDevice{}
 	for _, iface := range ifaces {
@@ -270,4 +286,11 @@ func DiscoverAllComissionable(interfac string, disableipv6 bool) []DiscoveredDev
 		out = append(out, d)
 	}
 	return out
+}
+
+// DiscoverAllComissionable uses mdns to discover all matter devices with open commissioning window
+//
+// Deprecated: use DiscoverAllCommissionable.
+func DiscoverAllComissionable(interfac string, disableipv6 bool) []DiscoveredDevice {
+	return DiscoverAllCommissionable(interfac, disableipv6)
 }

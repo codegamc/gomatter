@@ -738,7 +738,7 @@ func main() {
 			if err != nil {
 				return fmt.Errorf("invalid passcode %q: %w", pin, err)
 			}
-			//commision(fabric, discover_with_qr(qr).addrs[1], 123456)
+			//commission(fabric, discover_with_qr(qr).addrs[1], 123456)
 			err = gomat.Commission(fabric, net.ParseIP(ip), pinn, controller_id, device_id)
 			if err != nil {
 				if strings.Contains(err.Error(), "pake3 is not success code: 2") {
@@ -845,7 +845,7 @@ func main() {
 				device_filter = strings.ToUpper(dids)
 				device_filter = device_filter + "._matter._tcp.local."
 			}
-			devices := discover.DiscoverAllComissioned(device, disable_ipv6)
+			devices := discover.DiscoverAllCommissioned(device, disable_ipv6)
 			for _, device := range devices {
 				if (len(device_filter)) > 0 && device.Name != device_filter {
 					continue
@@ -874,7 +874,7 @@ func main() {
 				device_filter = strings.ToUpper(dids)
 				device_filter = device_filter + "._matter._tcp.local."
 			}
-			devices := discover.DiscoverComissioned(device, disable_ipv6, device_filter)
+			devices := discover.DiscoverCommissioned(device, disable_ipv6, device_filter)
 			for _, device := range devices {
 				if (len(device_filter)) > 0 && device.Name != device_filter {
 					continue
@@ -890,7 +890,7 @@ func main() {
 			device, _ := cmd.Flags().GetString("interface")
 			disable_ipv6, _ := cmd.Flags().GetBool("disable-ipv6")
 			qrtext, _ := cmd.Flags().GetString("qr")
-			devices := discover.DiscoverAllComissionable(device, disable_ipv6)
+			devices := discover.DiscoverAllCommissionable(device, disable_ipv6)
 			if len(qrtext) > 0 {
 				qr := onboarding_payload.DecodeQrText(qrtext)
 				devices = filter_devices(devices, qr)

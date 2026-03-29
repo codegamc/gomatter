@@ -32,9 +32,9 @@ The goal is to create golang library and supporting tools to access matter devic
   - during commissioning procedure root CA certificate is pushed to device together with id of device admin user
   - root CA certificate is something you need to create once and store. loosing CA keys usually means that you will have to commission devices again
   - to talk to device you have to commission it first
-    - to commission device you usually need its pin/passcode and device be in state open for commisioning
-    - device gets into commisioning window open state often by "factory reset"
-    - when device is commissioned - connected to some fabric, it can be commissionined into other fabrics using api, where existing admin user sets device to be open for additional commissioning. During that device can be connected to additional fabric(s) - additional root CA installed and additional admin user configured
+    - to commission device you usually need its pin/passcode and device be in state open for commissioning
+    - device gets into commissioning window open state often by "factory reset"
+    - when device is commissioned - connected to some fabric, it can be commissioned into other fabrics using api, where existing admin user sets device to be open for additional commissioning. During that device can be connected to additional fabric(s) - additional root CA installed and additional admin user configured
 
 ### how to use test application
 - compile
@@ -55,7 +55,7 @@ go build -o gomatter demo/main.go
   - it can be extracted from QR code. use decode-qr to extract passcode from text representation of QR code `./gomatter decode-qr MT:-24J0AFN00SIQ663000`
   - it can be extracted from manual pairing code. use command decode-mc to extract passcode from manual pairing code `./gomatter decode-mc 35792000079`
 - perform commissioning of device. This authenticates using passcode, uploads CA certificate to device, signs and uploads device's own certificate and sets admin user id.
-  - required for commisioning:
+  - required for commissioning:
     - ip address of device
     - device commissioning passcode/pin
     - ca key and certificate
@@ -185,7 +185,7 @@ func main() {
   identifier = strings.ToUpper(identifier)
   identifier = identifier + "._matter._tcp.local."
   fmt.Printf("%s\n", identifier)
-  devices := discover.DiscoverComissioned("", true, identifier)
+  devices := discover.DiscoverCommissioned("", true, identifier)
   for _, d := range devices {
     fmt.Printf("host:%s ip:%v\n", d.Host, d.Addrs)
   }
