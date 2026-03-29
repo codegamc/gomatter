@@ -8,6 +8,7 @@
 package main
 
 import (
+	"context"
 	"math/rand"
 	"net"
 
@@ -33,7 +34,7 @@ func loadFabric(fabric_id uint64) *gomat.Fabric {
 
 func commission(fabric_id, admin_user, device_id uint64, device_ip string, pin int) {
 	fabric := loadFabric(fabric_id)
-	if err := gomat.Commission(fabric, net.ParseIP(device_ip), pin, admin_user, device_id); err != nil {
+	if err := gomat.Commission(context.Background(), fabric, net.ParseIP(device_ip), pin, admin_user, device_id); err != nil {
 		panic(err)
 	}
 }
@@ -49,7 +50,7 @@ func sendOnCommand(secure_channel *gomat.SecureChannel) {
 	secure_channel.Send(on_command)
 
 	// process ON command response
-	response, err := secure_channel.Receive()
+	response, err := secure_channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +78,7 @@ func sendColorCommand(secure_channel *gomat.SecureChannel) {
 	secure_channel.Send(color_command)
 
 	// process command response
-	response, err := secure_channel.Receive()
+	response, err := secure_channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -107,7 +108,7 @@ func main() {
 
 	// connect to commissioned device
 	fabric := loadFabric(fabric_id)
-	secure_channel, err := gomat.ConnectDevice(net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
+	secure_channel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
 	if err != nil {
 		panic(err)
 	}

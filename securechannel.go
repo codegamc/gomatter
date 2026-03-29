@@ -2,6 +2,7 @@ package gomat
 
 import (
 	"bytes"
+	"context"
 	"crypto/aes"
 	"encoding/binary"
 	"fmt"
@@ -86,19 +87,43 @@ func StartSecureChannel(remote_ip net.IP, remote_port, local_port int) (*SecureC
 	return sc, nil
 }
 
-func (sc *SecureChannel) Receive() (DecodedGeneric, error) {
-	return sc.ReceiveWithTimeout(sc.receiveTimeout)
+func (sc *SecureChannel) Receive(ctx context.Context) (DecodedGeneric, error) {
+	return sc.receiveWithContext(ctx, sc.receiveTimeout)
 }
 
 func (sc *SecureChannel) ReceiveWithTimeout(timeout time.Duration) (DecodedGeneric, error) {
+	return sc.receiveWithContext(context.Background(), timeout)
+}
+
+func (sc *SecureChannel) receiveWithContext(ctx context.Context, timeout time.Duration) (DecodedGeneric, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return DecodedGeneric{}, err
+	}
+
 	var deadline time.Time
 	if timeout > 0 {
 		deadline = time.Now().Add(timeout)
 	}
+	if ctxDeadline, ok := ctx.Deadline(); ok && (deadline.IsZero() || ctxDeadline.Before(deadline)) {
+		deadline = ctxDeadline
+	}
 	if err := sc.Udp.Udp.SetReadDeadline(deadline); err != nil {
 		return DecodedGeneric{}, err
 	}
-	return sc.receive()
+
+	stop := context.AfterFunc(ctx, func() {
+		_ = sc.Udp.Udp.SetReadDeadline(time.Now())
+	})
+	defer stop()
+
+	out, err := sc.receive(ctx)
+	if err != nil && ctx.Err() != nil {
+		return DecodedGeneric{}, ctx.Err()
+	}
+	return out, err
 }
 
 func (sc *SecureChannel) ReceiveBlocking() (DecodedGeneric, error) {
@@ -109,7 +134,7 @@ func (sc *SecureChannel) SetReceiveTimeout(timeout time.Duration) {
 	sc.receiveTimeout = timeout
 }
 
-func (sc *SecureChannel) receive() (DecodedGeneric, error) {
+func (sc *SecureChannel) receive(ctx context.Context) (DecodedGeneric, error) {
 	data, err := sc.Udp.receive()
 	if err != nil {
 		return DecodedGeneric{}, err
@@ -156,7 +181,7 @@ func (sc *SecureChannel) receive() (DecodedGeneric, error) {
 
 	if out.ProtocolHeader.ProtocolId == 0 {
 		if out.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_ACK { // standalone ack
-			return sc.receive()
+			return sc.receive(ctx)
 		}
 	}
 

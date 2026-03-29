@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -56,7 +57,7 @@ func command_list_fabrics(cmd *cobra.Command) {
 	to_send := gomat.EncodeIMReadRequest(0, 0x3e, 1)
 	channel.Send(to_send)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +120,7 @@ func command_list_device_types(cmd *cobra.Command) {
 	to_send := gomat.EncodeIMReadRequest(0, symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_DeviceTypeList)
 	channel.Send(to_send)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +161,7 @@ func command_list_supported_clusters(cmd *cobra.Command, args []string) {
 	to_send := gomat.EncodeIMReadRequest(uint16(endpoint), symbols.CLUSTER_ID_Descriptor, symbols.ATTRIBUTE_ID_Descriptor_ServerList)
 	channel.Send(to_send)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -203,7 +204,7 @@ func command_list_interfaces(cmd *cobra.Command, args []string) {
 	to_send := gomat.EncodeIMReadRequest(0, symbols.CLUSTER_ID_GeneralDiagnostics, symbols.ATTRIBUTE_ID_GeneralDiagnostics_NetworkInterfaces)
 	channel.Send(to_send)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -251,7 +252,7 @@ func command_get_logs(cmd *cobra.Command, args []string) {
 	to_send := gomat.EncodeIMInvokeRequest(uint16(endpoint), symbols.CLUSTER_ID_DiagnosticLogs, symbols.COMMAND_ID_DiagnosticLogs_RetrieveLogsRequest, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 	channel.Send(to_send)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -294,7 +295,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	var exchange uint16 = uint16(rand.Intn(0xffff))
 	to_send := gomat.EncodeIMTimedRequest(exchange, 6000)
 	channel.Send(to_send)
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -315,7 +316,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	to_send = gomat.EncodeIMInvokeRequest(0, symbols.CLUSTER_ID_AdministratorCommissioning, symbols.COMMAND_ID_AdministratorCommissioning_OpenCommissioningWindow, tlv.Bytes(), true, exchange)
 	channel.Send(to_send)
 
-	resp, err = channel.Receive()
+	resp, err = channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -383,7 +384,7 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 
 	channel.Send(toSend)
 
-	resp, err := channel.Receive()
+	resp, err := channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -446,12 +447,7 @@ func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (*gomat.Secu
 	device_id, _ := cmd.Flags().GetUint64("device-id")
 	controller_id, _ := cmd.Flags().GetUint64("controller-id")
 
-	secure_channel, err := gomat.StartSecureChannel(net.ParseIP(ip), 5540, 55555)
-	if err != nil {
-		panic(err)
-	}
-	secure_channel, err = gomat.SigmaExchange(fabric, controller_id, device_id, secure_channel)
-	return secure_channel, err
+	return gomat.ConnectDevice(context.Background(), net.ParseIP(ip), 5540, fabric, device_id, controller_id)
 }
 
 var eventReportDictionary = map[string]string{
@@ -562,7 +558,7 @@ func main() {
 			to_send := gomat.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_Off, []byte{}, false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
-			resp, err := channel.Receive()
+			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
@@ -585,7 +581,7 @@ func main() {
 			to_send := gomat.EncodeIMInvokeRequest(1, symbols.CLUSTER_ID_OnOff, symbols.COMMAND_ID_OnOff_On, []byte{}, false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
-			resp, err := channel.Receive()
+			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
@@ -624,7 +620,7 @@ func main() {
 			to_send := gomat.EncodeIMInvokeRequest(1, 0x300, 6, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
-			resp, err := channel.Receive()
+			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
@@ -661,7 +657,7 @@ func main() {
 			to_send := gomat.EncodeIMInvokeRequest(2, 0x1312fc03, 0x13120007, tlv.Bytes(), false, uint16(rand.Intn(0xffff)))
 			channel.Send(to_send)
 
-			resp, err := channel.Receive()
+			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
@@ -689,7 +685,7 @@ func main() {
 			to_send := gomat.EncodeIMReadRequest(uint16(endpoint), uint32(cluster), uint32(attr))
 			channel.Send(to_send)
 
-			resp, err := channel.Receive()
+			resp, err := channel.Receive(context.Background())
 			if err != nil {
 				panic(err)
 			}
@@ -742,7 +738,7 @@ func main() {
 				return fmt.Errorf("invalid passcode %q: %w", pin, err)
 			}
 			//commission(fabric, discover_with_qr(qr).addrs[1], 123456)
-			err = gomat.Commission(fabric, net.ParseIP(ip), pinn, controller_id, device_id)
+			err = gomat.Commission(context.Background(), fabric, net.ParseIP(ip), pinn, controller_id, device_id)
 			if err != nil {
 				if strings.Contains(err.Error(), "pake3 is not success code: 2") {
 					normalizedPin := strings.ReplaceAll(pin, "-", "")
@@ -750,7 +746,7 @@ func main() {
 						pairingCode := onboarding_payload.DecodeManualPairingCode(pin)
 						passcode := pairingCode.Passcode
 						fmt.Printf("commissioning note: --pin=%q looks like a manual pairing code; retrying with decoded setup passcode %d\n", pin, passcode)
-						retryErr := gomat.Commission(fabric, net.ParseIP(ip), int(passcode), controller_id, device_id)
+						retryErr := gomat.Commission(context.Background(), fabric, net.ParseIP(ip), int(passcode), controller_id, device_id)
 						if retryErr == nil {
 							fmt.Printf("commissioning note: automatic retry with decoded setup passcode %d succeeded\n", passcode)
 							err = nil

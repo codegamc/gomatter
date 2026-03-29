@@ -88,6 +88,7 @@ create ca with root certificate, create admin user, then commission device:
 package main
 
 import (
+  "context"
   "net"
 
   "github.com/codegamc/gomatter"
@@ -106,7 +107,7 @@ func main() {
   cm.Load()
   cm.CreateUser(admin_user)
   fabric := gomat.NewFabric(fabric_id, cm)
-  gomat.Commission(fabric, net.ParseIP(device_ip), pin, admin_user, device_id)
+  gomat.Commission(context.Background(), fabric, net.ParseIP(device_ip), pin, admin_user, device_id)
 }
 ```
 
@@ -115,6 +116,7 @@ func main() {
 package main
 
 import (
+  "context"
   "net"
 
   "github.com/codegamc/gomatter"
@@ -131,15 +133,11 @@ func main() {
   cm.Load()
   fabric := gomat.NewFabric(fabric_id, cm)
 
-  secure_channel, err := gomat.StartSecureChannel(net.ParseIP(device_ip), 5540, 55555)
+  secure_channel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
   if err != nil {
     panic(err)
   }
   defer secure_channel.Close()
-  secure_channel, err = gomat.SigmaExchange(fabric, admin_user, device_id, secure_channel)
-  if err != nil {
-    panic(err)
-  }
 
   on_command := gomat.EncodeInvokeCommand(1,        // endpoint
                                           6,        // api cluster (on/off)
@@ -147,7 +145,7 @@ func main() {
                                           []byte{}, // no extra data
                                           )
   secure_channel.Send(on_command)
-  resp, err := secure_channel.Receive()
+  resp, err := secure_channel.Receive(context.Background())
   if err != nil {
     panic(err)
   }
@@ -223,6 +221,7 @@ func main() {
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -242,15 +241,11 @@ func main() {
 	fabric := gomat.NewFabric(fabric_id, cm)
 
 
-	secure_channel, err := gomat.StartSecureChannel(net.ParseIP(device_ip), 5540, 55555)
+	secure_channel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
 	if err != nil {
 		panic(err)
 	}
 	defer secure_channel.Close()
-	secure_channel, err = gomat.SigmaExchange(fabric, admin_user, device_id, secure_channel)
-	if err != nil {
-		panic(err)
-	}
 
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteUInt8(0, byte(hue))        // hue
@@ -259,7 +254,7 @@ func main() {
 	to_send := gomat.EncodeInvokeCommand(1, 0x300, 6, tlv.Bytes())
 	secure_channel.Send(to_send)
 
-	resp, err := secure_channel.Receive()
+	resp, err := secure_channel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}

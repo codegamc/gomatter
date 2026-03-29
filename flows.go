@@ -1,6 +1,7 @@
 package gomat
 
 import (
+	"context"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -15,7 +16,7 @@ import (
 
 // spake2pExchange establishes secure session using PASE (Passcode-Authenticated Session Establishment).
 // This uses SPAKE2+ protocol
-func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
+func spake2pExchange(ctx context.Context, pin int, udp *udpChannel) (*SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
 	secure_channel := newSecureChannel(udp)
 	secure_channel.session = 0
@@ -24,7 +25,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	pbkdf_request := pBKDFParamRequest(exchange)
 	secure_channel.Send(pbkdf_request)
 
-	pbkdf_responseS, err := secure_channel.Receive()
+	pbkdf_responseS, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("pbkdf response not received: %s", err.Error())
 	}
@@ -49,7 +50,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	pake1 := pake1ParamRequest(exchange, sctx.X.As_bytes())
 	secure_channel.Send(pake1)
 
-	pake2s, err := secure_channel.Receive()
+	pake2s, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("pake2 not received: %s", err.Error())
 	}
@@ -72,7 +73,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 	pake3 := pake3ParamRequest(exchange, sctx.cA)
 	secure_channel.Send(pake3)
 
-	status_report, err := secure_channel.Receive()
+	status_report, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +92,7 @@ func spake2pExchange(pin int, udp *udpChannel) (*SecureChannel, error) {
 }
 
 // SigmaExhange establishes secure session using CASE (Certificate Authenticated Session Establishment)
-func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secure_channel *SecureChannel) (*SecureChannel, error) {
+func SigmaExchange(ctx context.Context, fabric *Fabric, controller_id uint64, device_id uint64, secure_channel *SecureChannel) (*SecureChannel, error) {
 
 	controller_privkey, _ := ecdh.P256().GenerateKey(rand.Reader)
 	sigma_context := sigmaContext{
@@ -103,7 +104,7 @@ func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secur
 	secure_channel.Send(sigma1)
 
 	var err error
-	sigma_context.sigma2dec, err = secure_channel.Receive()
+	sigma_context.sigma2dec, err = secure_channel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +133,7 @@ func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secur
 	}
 	secure_channel.Send(to_send)
 
-	sigma_result, err := secure_channel.Receive()
+	sigma_result, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func SigmaExchange(fabric *Fabric, controller_id uint64, device_id uint64, secur
 //   - pin is passcode used for device pairing
 //   - controller_id is identifier of node whioch will be owner/admin of this device
 //   - device_id_id is identifier of "new" device
-func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device_id uint64) error {
+func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, controller_id, device_id uint64) error {
 
 	channel, err := startUdpChannel(device_ip, 5540, 55555)
 	if err != nil {
@@ -167,7 +168,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	secure_channel := newSecureChannel(channel)
 	defer secure_channel.Close()
 
-	secure_channel, err = spake2pExchange(pin, channel)
+	secure_channel, err = spake2pExchange(ctx, pin, channel)
 	if err != nil {
 		return err
 	}
@@ -178,7 +179,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	to_send := EncodeIMInvokeRequest(0, 0x3e, 4, tlvb.Bytes(), false, uint16(randm.Intn(0xffff)))
 	secure_channel.Send(to_send)
 
-	csr_resp, err := secure_channel.Receive()
+	csr_resp, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -200,7 +201,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	to_send = EncodeIMInvokeRequest(0, 0x3e, 0xb, tlv4.Bytes(), false, uint16(randm.Intn(0xffff)))
 	secure_channel.Send(to_send)
 
-	resp, err := secure_channel.Receive()
+	resp, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -228,7 +229,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 
 	secure_channel.Send(to_send)
 
-	resp, err = secure_channel.Receive()
+	resp, err = secure_channel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -244,7 +245,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	secure_channel.encrypt_key = []byte{}
 	secure_channel.session = 0
 
-	secure_channel, err = SigmaExchange(fabric, controller_id, device_id, secure_channel)
+	secure_channel, err = SigmaExchange(ctx, fabric, controller_id, device_id, secure_channel)
 	if err != nil {
 		return err
 	}
@@ -253,7 +254,7 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	to_send = EncodeIMInvokeRequest(0, 0x30, 4, []byte{}, false, uint16(randm.Intn(0xffff)))
 	secure_channel.Send(to_send)
 
-	respx, err := secure_channel.Receive()
+	respx, err := secure_channel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -269,13 +270,13 @@ func Commission(fabric *Fabric, device_ip net.IP, pin int, controller_id, device
 	return nil
 }
 
-func ConnectDevice(device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64) (*SecureChannel, error) {
+func ConnectDevice(ctx context.Context, device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64) (*SecureChannel, error) {
 	var secure_channel *SecureChannel
 	var err error
 	if secure_channel, err = StartSecureChannel(device_ip, port, 55555); err != nil {
 		return nil, err
 	}
-	if secure_channel, err = SigmaExchange(fabric, admin_id, device_id, secure_channel); err != nil {
+	if secure_channel, err = SigmaExchange(ctx, fabric, admin_id, device_id, secure_channel); err != nil {
 		return nil, err
 	}
 	return secure_channel, nil
