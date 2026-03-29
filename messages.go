@@ -17,22 +17,22 @@ const ProtocolIdInteraction ProtocolId = 1
 
 type Opcode byte
 
-const SEC_CHAN_OPCODE_ACK Opcode = 0x10
-const SEC_CHAN_OPCODE_PBKDF_REQ Opcode = 0x20
-const SEC_CHAN_OPCODE_PBKDF_RESP Opcode = 0x21
-const SEC_CHAN_OPCODE_PAKE1 Opcode = 0x22
-const SEC_CHAN_OPCODE_PAKE2 Opcode = 0x23
-const SEC_CHAN_OPCODE_PAKE3 Opcode = 0x24
-const SEC_CHAN_OPCODE_STATUS_REP Opcode = 0x40
+const SecChanOpcodeAck Opcode = 0x10
+const SecChanOpcodePBKDFReq Opcode = 0x20
+const SecChanOpcodePBKDFResp Opcode = 0x21
+const SecChanOpcodePAKE1 Opcode = 0x22
+const SecChanOpcodePAKE2 Opcode = 0x23
+const SecChanOpcodePAKE3 Opcode = 0x24
+const SecChanOpcodeStatusRep Opcode = 0x40
 
-const INTERACTION_OPCODE_STATUS_RSP Opcode = 0x1
-const INTERACTION_OPCODE_READ_REQ Opcode = 0x2
-const INTERACTION_OPCODE_SUBSC_REQ Opcode = 0x3
-const INTERACTION_OPCODE_SUBSC_RSP Opcode = 0x4
-const INTERACTION_OPCODE_REPORT_DATA Opcode = 0x5
-const INTERACTION_OPCODE_INVOKE_REQ Opcode = 0x8
-const INTERACTION_OPCODE_INVOKE_RSP Opcode = 0x9
-const INTERACTION_OPCODE_TIMED_REQ Opcode = 0xa
+const InteractionOpcodeStatusRsp Opcode = 0x1
+const InteractionOpcodeReadReq Opcode = 0x2
+const InteractionOpcodeSubscReq Opcode = 0x3
+const InteractionOpcodeSubscRsp Opcode = 0x4
+const InteractionOpcodeReportData Opcode = 0x5
+const InteractionOpcodeInvokeReq Opcode = 0x8
+const InteractionOpcodeInvokeRsp Opcode = 0x9
+const InteractionOpcodeTimedReq Opcode = 0xa
 
 const exchangeFlagsInitiator = 1
 const exchangeFlagsAcknowledge = 2
@@ -163,7 +163,7 @@ func pBKDFParamRequest(exchange uint16) []byte {
 
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        SEC_CHAN_OPCODE_PBKDF_REQ,
+		Opcode:        SecChanOpcodePBKDFReq,
 		ExchangeId:    exchange,
 		ProtocolId:    ProtocolIdSecureChannel,
 	}
@@ -186,7 +186,7 @@ func pake1ParamRequest(exchange uint16, key []byte) []byte {
 
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        SEC_CHAN_OPCODE_PAKE1,
+		Opcode:        SecChanOpcodePAKE1,
 		ExchangeId:    exchange,
 		ProtocolId:    ProtocolIdSecureChannel,
 	}
@@ -204,7 +204,7 @@ func pake3ParamRequest(exchange uint16, key []byte) []byte {
 	var buffer bytes.Buffer
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        SEC_CHAN_OPCODE_PAKE3,
+		Opcode:        SecChanOpcodePAKE3,
 		ExchangeId:    exchange,
 		ProtocolId:    ProtocolIdSecureChannel,
 	}
@@ -227,7 +227,7 @@ func ackGen(p ProtocolMessageHeader, counter uint32) []byte {
 	}
 	prot := ProtocolMessageHeader{
 		exchangeFlags: eflags,
-		Opcode:        SEC_CHAN_OPCODE_ACK,
+		Opcode:        SecChanOpcodeAck,
 		ExchangeId:    p.ExchangeId,
 		ProtocolId:    ProtocolIdSecureChannel,
 	}
@@ -271,11 +271,11 @@ type DecodedGeneric struct {
 
 func EncodeStatusReport(code StatusReportElements) []byte {
 	var buffer bytes.Buffer
-	buffer.WriteByte(5)                                // flags
-	buffer.WriteByte(byte(SEC_CHAN_OPCODE_STATUS_REP)) // opcode
-	var exchange_id uint16
-	exchange_id = uint16(randm.Intn(0xffff))
-	binary.Write(&buffer, binary.LittleEndian, exchange_id)
+	buffer.WriteByte(5)                            // flags
+	buffer.WriteByte(byte(SecChanOpcodeStatusRep)) // opcode
+	var exchangeID uint16
+	exchangeID = uint16(randm.Intn(0xffff))
+	binary.Write(&buffer, binary.LittleEndian, exchangeID)
 	var protocol_id uint16 = uint16(ProtocolIdSecureChannel)
 	binary.Write(&buffer, binary.LittleEndian, protocol_id)
 	binary.Write(&buffer, binary.LittleEndian, code.GeneralCode)
@@ -310,7 +310,7 @@ func EncodeIMInvokeRequest(endpoint uint16, cluster uint32, command uint32, payl
 	var buffer bytes.Buffer
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        INTERACTION_OPCODE_INVOKE_REQ,
+		Opcode:        InteractionOpcodeInvokeReq,
 		ExchangeId:    exchange,
 		ProtocolId:    ProtocolIdInteraction,
 	}
@@ -339,7 +339,7 @@ func EncodeIMReadRequest(endpoint uint16, cluster uint32, attr uint32) []byte {
 
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        INTERACTION_OPCODE_READ_REQ,
+		Opcode:        InteractionOpcodeReadReq,
 		ExchangeId:    0,
 		ProtocolId:    ProtocolIdInteraction,
 	}
@@ -414,7 +414,7 @@ func encodeIMSubscribeRequest(req subscribeRequest) []byte {
 	var buffer bytes.Buffer
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        INTERACTION_OPCODE_SUBSC_REQ,
+		Opcode:        InteractionOpcodeSubscReq,
 		ExchangeId:    0,
 		ProtocolId:    ProtocolIdInteraction,
 	}
@@ -470,7 +470,7 @@ func EncodeIMTimedRequest(exchange uint16, timeout uint16) []byte {
 	var buffer bytes.Buffer
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 5,
-		Opcode:        INTERACTION_OPCODE_TIMED_REQ,
+		Opcode:        InteractionOpcodeTimedReq,
 		ExchangeId:    exchange,
 		ProtocolId:    ProtocolIdInteraction,
 	}
@@ -482,7 +482,7 @@ func EncodeIMTimedRequest(exchange uint16, timeout uint16) []byte {
 }
 
 // EncodeIMStatusResponse encodes success Interaction Model Invoke Response
-func EncodeIMStatusResponse(exchange_id uint16, iflag byte) []byte {
+func EncodeIMStatusResponse(exchangeID uint16, iflag byte) []byte {
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteAnonStruct()
 	tlv.WriteUInt8(0, 0)
@@ -491,8 +491,8 @@ func EncodeIMStatusResponse(exchange_id uint16, iflag byte) []byte {
 	var buffer bytes.Buffer
 	prot := ProtocolMessageHeader{
 		exchangeFlags: 4 | iflag,
-		Opcode:        INTERACTION_OPCODE_STATUS_RSP,
-		ExchangeId:    exchange_id,
+		Opcode:        InteractionOpcodeStatusRsp,
+		ExchangeId:    exchangeID,
 		ProtocolId:    ProtocolIdInteraction,
 	}
 	prot.Encode(&buffer)

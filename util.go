@@ -17,25 +17,25 @@ func CreateRandomBytes(n int) []byte {
 	return out
 }
 
-func id_to_bytes(id uint64) []byte {
+func idToBytes(id uint64) []byte {
 	var b bytes.Buffer
 	binary.Write(&b, binary.LittleEndian, id)
 	return b.Bytes()
 }
 
-func hmac_sha256_enc(in []byte, key []byte) []byte {
+func hmacSHA256Enc(in []byte, key []byte) []byte {
 	mac := hmac.New(sha256.New, key)
 	mac.Write(in)
 	return mac.Sum(nil)
 }
 
-func sha256_enc(in []byte) []byte {
+func sha256Enc(in []byte) []byte {
 	s := sha256.New()
 	s.Write(in)
 	return s.Sum(nil)
 }
 
-func hkdf_sha256(secret, salt, info []byte, size int) []byte {
+func hkdfSHA256(secret, salt, info []byte, size int) []byte {
 	engine := hkdf.New(sha256.New, secret, salt, info)
 	key := make([]byte, size)
 	if _, err := io.ReadFull(engine, key); err != nil {

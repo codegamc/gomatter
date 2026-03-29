@@ -61,7 +61,7 @@ func command_list_fabrics(cmd *cobra.Command) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -78,9 +78,9 @@ func command_list_fabrics(cmd *cobra.Command) {
 		if vendor_id != nil {
 			fmt.Printf("vendor_id: %d\n", vendor_id.GetInt())
 		}
-		fabric_id := fabr.GetItemWithTag(3)
-		if fabric_id != nil {
-			fmt.Printf("fabric_id: %d\n", fabric_id.GetInt())
+		fabricID := fabr.GetItemWithTag(3)
+		if fabricID != nil {
+			fmt.Printf("fabric_id: %d\n", fabricID.GetInt())
 		}
 		node_id := fabr.GetItemWithTag(4)
 		if node_id != nil {
@@ -124,7 +124,7 @@ func command_list_device_types(cmd *cobra.Command) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -165,7 +165,7 @@ func command_list_supported_clusters(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 
@@ -208,7 +208,7 @@ func command_list_interfaces(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
 		panic("did not receive report data message")
 	}
 	dict := map[string]string{
@@ -256,7 +256,7 @@ func command_get_logs(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_INVOKE_RSP {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
 		panic("did not receive report data message")
 	}
 
@@ -277,13 +277,13 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	salt := gomat.CreateRandomBytes(32)
 	iterations := 1000
 	sctx := gomat.NewSpakeCtx()
-	sctx.Gen_w(int(pin), salt, iterations)
-	sctx.Gen_random_X()
-	sctx.Gen_random_Y()
-	sctx.Calc_X()
-	sctx.Calc_ZVb()
+	sctx.GenerateW(int(pin), salt, iterations)
+	sctx.GenerateRandomX()
+	sctx.GenerateRandomY()
+	sctx.CalculateX()
+	sctx.CalculateZVb()
 	data := sctx.W0
-	data = append(data, sctx.L.As_bytes()...)
+	data = append(data, sctx.L.AsBytes()...)
 
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteUInt8(0, 240)                 // timeout
@@ -299,7 +299,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_STATUS_RSP {
+	if resp.ProtocolHeader.Opcode == gomat.InteractionOpcodeStatusRsp {
 		status := resp.Tlv.GetItemWithTag(0)
 		if status != nil {
 			if status.GetInt() != 0 {
@@ -321,7 +321,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 		panic(err)
 	}
 
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_INVOKE_RSP {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeInvokeRsp {
 		panic("did not receive report data message")
 	}
 
@@ -388,7 +388,7 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 	if err != nil {
 		panic(err)
 	}
-	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
+	if resp.ProtocolHeader.Opcode != gomat.InteractionOpcodeReportData {
 		log.Println("unexpected message")
 		resp.ProtocolHeader.Dump()
 		panic("did not receive report data message")
@@ -403,15 +403,15 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 			log.Println(err)
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_SUBSC_RSP {
+		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeSubscRsp {
 			log.Println("subscribe response")
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_STATUS_RSP {
+		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeStatusRsp {
 			log.Println("status response")
 			continue
 		}
-		if r.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_REPORT_DATA {
+		if r.ProtocolHeader.Opcode == gomat.InteractionOpcodeReportData {
 			fmt.Printf("%s:\n", reportLabel)
 			r.Tlv.DumpWithDict(0, "", dictionary)
 			sr = gomat.EncodeIMStatusResponse(r.ProtocolHeader.ExchangeId, 0)
@@ -434,20 +434,20 @@ func createBasicFabric(id uint64) *gomat.Fabric {
 }
 
 func createBasicFabricFromCmd(cmd *cobra.Command) *gomat.Fabric {
-	fabric_id_str, _ := cmd.Flags().GetString("fabric")
-	id, err := strconv.ParseUint(fabric_id_str, 0, 64)
+	fabricIDStr, _ := cmd.Flags().GetString("fabric")
+	id, err := strconv.ParseUint(fabricIDStr, 0, 64)
 	if err != nil {
-		panic(fmt.Sprintf("invalid fabric id %s", fabric_id_str))
+		panic(fmt.Sprintf("invalid fabric id %s", fabricIDStr))
 	}
 	return createBasicFabric(id)
 }
 
 func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (*gomat.SecureChannel, error) {
 	ip, _ := cmd.Flags().GetString("ip")
-	device_id, _ := cmd.Flags().GetUint64("device-id")
-	controller_id, _ := cmd.Flags().GetUint64("controller-id")
+	deviceID, _ := cmd.Flags().GetUint64("device-id")
+	controllerID, _ := cmd.Flags().GetUint64("controller-id")
 
-	return gomat.ConnectDevice(context.Background(), net.ParseIP(ip), 5540, fabric, device_id, controller_id)
+	return gomat.ConnectDevice(context.Background(), net.ParseIP(ip), 5540, fabric, deviceID, controllerID)
 }
 
 var eventReportDictionary = map[string]string{
@@ -690,7 +690,7 @@ func main() {
 				panic(err)
 			}
 			if (resp.ProtocolHeader.ProtocolId == gomat.ProtocolIdInteraction) &&
-				(resp.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_REPORT_DATA) {
+				(resp.ProtocolHeader.Opcode == gomat.InteractionOpcodeReportData) {
 				resp.Tlv.Dump(0)
 			}
 			channel.Close()
@@ -731,14 +731,14 @@ func main() {
 				return fmt.Errorf("passcode is required")
 			}
 			fabric := createBasicFabricFromCmd(cmd)
-			device_id, _ := cmd.Flags().GetUint64("device-id")
-			controller_id, _ := cmd.Flags().GetUint64("controller-id")
+			deviceID, _ := cmd.Flags().GetUint64("device-id")
+			controllerID, _ := cmd.Flags().GetUint64("controller-id")
 			pinn, err := strconv.Atoi(pin)
 			if err != nil {
 				return fmt.Errorf("invalid passcode %q: %w", pin, err)
 			}
 			//commission(fabric, discover_with_qr(qr).addrs[1], 123456)
-			err = gomat.Commission(context.Background(), fabric, net.ParseIP(ip), pinn, controller_id, device_id)
+			err = gomat.Commission(context.Background(), fabric, net.ParseIP(ip), pinn, controllerID, deviceID)
 			if err != nil {
 				if strings.Contains(err.Error(), "pake3 is not success code: 2") {
 					normalizedPin := strings.ReplaceAll(pin, "-", "")
@@ -746,7 +746,7 @@ func main() {
 						pairingCode := onboarding_payload.DecodeManualPairingCode(pin)
 						passcode := pairingCode.Passcode
 						fmt.Printf("commissioning note: --pin=%q looks like a manual pairing code; retrying with decoded setup passcode %d\n", pin, passcode)
-						retryErr := gomat.Commission(context.Background(), fabric, net.ParseIP(ip), int(passcode), controller_id, device_id)
+						retryErr := gomat.Commission(context.Background(), fabric, net.ParseIP(ip), int(passcode), controllerID, deviceID)
 						if retryErr == nil {
 							fmt.Printf("commissioning note: automatic retry with decoded setup passcode %d succeeded\n", passcode)
 							err = nil
@@ -762,7 +762,7 @@ func main() {
 
 			cf := fabric.CompressedFabric()
 			csf := hex.EncodeToString(cf)
-			dids := fmt.Sprintf("%s-%016X", csf, device_id)
+			dids := fmt.Sprintf("%s-%016X", csf, deviceID)
 			dids = strings.ToUpper(dids)
 			fmt.Printf("device identifier: %s\n", dids)
 			return nil
@@ -806,10 +806,10 @@ func main() {
 	var cabootCmd = &cobra.Command{
 		Use: "ca-bootstrap",
 		Run: func(cmd *cobra.Command, args []string) {
-			fabric_id_str, _ := cmd.Flags().GetString("fabric")
-			id, err := strconv.ParseUint(fabric_id_str, 0, 64)
+			fabricIDStr, _ := cmd.Flags().GetString("fabric")
+			id, err := strconv.ParseUint(fabricIDStr, 0, 64)
 			if err != nil {
-				panic(fmt.Sprintf("invalid fabric id %s", fabric_id_str))
+				panic(fmt.Sprintf("invalid fabric id %s", fabricIDStr))
 			}
 			cm := gomat.NewFileCertManager(id, gomat.FileCertManagerConfig{})
 			err = cm.BootstrapCa()
@@ -834,13 +834,13 @@ func main() {
 			if len(args) == 1 {
 				fabric := createBasicFabricFromCmd(cmd)
 				dids := args[0]
-				device_id, err := strconv.ParseInt(dids, 0, 64)
+				deviceID, err := strconv.ParseInt(dids, 0, 64)
 				if err != nil {
 					log.Panicf("incorrect device specification %s", dids)
 				}
 				cf := fabric.CompressedFabric()
 				csf := hex.EncodeToString(cf)
-				dids = fmt.Sprintf("%s-%016X", csf, device_id)
+				dids = fmt.Sprintf("%s-%016X", csf, deviceID)
 				device_filter = strings.ToUpper(dids)
 				device_filter = device_filter + "._matter._tcp.local."
 			}
@@ -863,13 +863,13 @@ func main() {
 			if len(args) == 1 {
 				fabric := createBasicFabricFromCmd(cmd)
 				dids := args[0]
-				device_id, err := strconv.ParseInt(dids, 0, 64)
+				deviceID, err := strconv.ParseInt(dids, 0, 64)
 				if err != nil {
 					log.Panicf("incorrect device specification %s", dids)
 				}
 				cf := fabric.CompressedFabric()
 				csf := hex.EncodeToString(cf)
-				dids = fmt.Sprintf("%s-%016X", csf, device_id)
+				dids = fmt.Sprintf("%s-%016X", csf, deviceID)
 				device_filter = strings.ToUpper(dids)
 				device_filter = device_filter + "._matter._tcp.local."
 			}

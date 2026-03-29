@@ -24,7 +24,7 @@ The goal is to create golang library and supporting tools to access matter devic
 - tested against virtual devices which are part of reference implementation https://github.com/project-chip/connectedhomeip
 - tested with yeelight cube
 - tested with Tapo Devices:
--- VID: 5010, PID: 261
+  - VID: 5010, PID: 261 (Tapo P110M)
 
 ### general info
 - it is best to understand matter to use this, but here is most important info:
@@ -98,18 +98,18 @@ import (
 
 
 func main() {
-  var fabric_id uint64 = 0x100
-  var admin_user uint64 = 5
-  var device_id uint64 = 10
-  device_ip := "192.168.5.178"
+  var fabricID uint64 = 0x100
+  var adminUser uint64 = 5
+  var deviceID uint64 = 10
+  deviceIP := "192.168.5.178"
   pin := 123456
 
-  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
+  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
   cm.BootstrapCa()
   cm.Load()
-  cm.CreateUser(admin_user)
-  fabric := gomat.NewFabric(fabric_id, cm)
-  gomat.Commission(context.Background(), fabric, net.ParseIP(device_ip), pin, admin_user, device_id)
+  cm.CreateUser(adminUser)
+  fabric := gomat.NewFabric(fabricID, cm)
+  gomat.Commission(context.Background(), fabric, net.ParseIP(deviceIP), pin, adminUser, deviceID)
 }
 ```
 
@@ -126,28 +126,28 @@ import (
 
 
 func main() {
-  var fabric_id uint64 = 0x100
-  var admin_user uint64 = 5
-  var device_id uint64 = 10
-  device_ip := "192.168.5.178"
+  var fabricID uint64 = 0x100
+  var adminUser uint64 = 5
+  var deviceID uint64 = 10
+  deviceIP := "192.168.5.178"
 
-  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
+  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomat.NewFabric(fabric_id, cm)
+  fabric := gomat.NewFabric(fabricID, cm)
 
-  secure_channel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
+  secureChannel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
   if err != nil {
     panic(err)
   }
-  defer secure_channel.Close()
+  defer secureChannel.Close()
 
   on_command := gomat.EncodeInvokeCommand(1,        // endpoint
                                           6,        // api cluster (on/off)
                                           1,        // on command
                                           []byte{}, // no extra data
                                           )
-  secure_channel.Send(on_command)
-  resp, err := secure_channel.Receive(context.Background())
+  secureChannel.Send(on_command)
+  resp, err := secureChannel.Receive(context.Background())
   if err != nil {
     panic(err)
   }
@@ -173,15 +173,15 @@ import (
 
 
 func main() {
-  var fabric_id uint64 = 0x100
-  var device_id uint64 = 10
+  var fabricID uint64 = 0x100
+  var deviceID uint64 = 10
 
 
-  cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
+  cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
   cm.Load()
-  fabric := gomat.NewFabric(fabric_id, cm)
+  fabric := gomat.NewFabric(fabricID, cm)
 
-  identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(fabric.CompressedFabric()), device_id)
+  identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(fabric.CompressedFabric()), deviceID)
   identifier = strings.ToUpper(identifier)
   identifier = identifier + "._matter._tcp.local."
   fmt.Printf("%s\n", identifier)
@@ -233,30 +233,30 @@ import (
 
 
 func main() {
-	var fabric_id uint64 = 0x100
-	var admin_user uint64 = 5
-	var device_id uint64 = 10
-	device_ip := "192.168.5.178"
+	var fabricID uint64 = 0x100
+	var adminUser uint64 = 5
+	var deviceID uint64 = 10
+	deviceIP := "192.168.5.178"
 
-	cm := gomat.NewFileCertManager(fabric_id, gomat.FileCertManagerConfig{})
+	cm := gomat.NewFileCertManager(fabricID, gomat.FileCertManagerConfig{})
 	cm.Load()
-	fabric := gomat.NewFabric(fabric_id, cm)
+	fabric := gomat.NewFabric(fabricID, cm)
 
 
-	secure_channel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(device_ip), 5540, fabric, device_id, admin_user)
+	secureChannel, err := gomat.ConnectDevice(context.Background(), net.ParseIP(deviceIP), 5540, fabric, deviceID, adminUser)
 	if err != nil {
 		panic(err)
 	}
-	defer secure_channel.Close()
+	defer secureChannel.Close()
 
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteUInt8(0, byte(hue))        // hue
 	tlv.WriteUInt8(1, byte(saturation)) // saturation
 	tlv.WriteUInt8(2, byte(time))       // time
 	to_send := gomat.EncodeInvokeCommand(1, 0x300, 6, tlv.Bytes())
-	secure_channel.Send(to_send)
+	secureChannel.Send(to_send)
 
-	resp, err := secure_channel.Receive(context.Background())
+	resp, err := secureChannel.Receive(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -271,6 +271,3 @@ func main() {
 
 #### certificate manager
 NewFabric function accepts certificate manager object as input parameter. Certificate manager must implement interface CertificateManager and user can supply own implementation. Supplied CertManager created by `NewFileCertManager` stores all data in `.pem` files under the default `pem` directory, and `FileCertManagerConfig.Path` can be used to store them somewhere else.
-
-#### notes
-consider move to https://pkg.go.dev/filippo.io/nistec

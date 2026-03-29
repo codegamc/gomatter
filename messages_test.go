@@ -78,7 +78,7 @@ func TestEncodeIMSubscribeRequestRegression(t *testing.T) {
 	}
 
 	header, decoded := decodeInteractionMessage(t, encoded)
-	if header.Opcode != INTERACTION_OPCODE_SUBSC_REQ {
+	if header.Opcode != InteractionOpcodeSubscReq {
 		t.Fatalf("unexpected opcode: 0x%x", header.Opcode)
 	}
 	if header.ProtocolId != ProtocolIdInteraction {
@@ -112,7 +112,7 @@ func TestEncodeIMSubscribeAttributeRequest(t *testing.T) {
 	encoded := EncodeIMSubscribeAttributeRequest(1, 0x6, 0)
 
 	header, decoded := decodeInteractionMessage(t, encoded)
-	if header.Opcode != INTERACTION_OPCODE_SUBSC_REQ {
+	if header.Opcode != InteractionOpcodeSubscReq {
 		t.Fatalf("unexpected opcode: 0x%x", header.Opcode)
 	}
 	if header.ProtocolId != ProtocolIdInteraction {
@@ -139,7 +139,7 @@ func TestEncodeIMSubscribeAttributeRequestWithIntervals(t *testing.T) {
 	encoded := EncodeIMSubscribeAttributeRequestWithIntervals(1, 0x6, 0, 2, 9)
 
 	header, decoded := decodeInteractionMessage(t, encoded)
-	if header.Opcode != INTERACTION_OPCODE_SUBSC_REQ {
+	if header.Opcode != InteractionOpcodeSubscReq {
 		t.Fatalf("unexpected opcode: 0x%x", header.Opcode)
 	}
 	if header.ProtocolId != ProtocolIdInteraction {

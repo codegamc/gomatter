@@ -25,16 +25,17 @@ func (fabric Fabric) Id() uint64 {
 // in matter protocol.
 func (fabric Fabric) CompressedFabric() []byte {
 	capub := fabric.CertificateManager.GetCaPublicKey()
-	capublic_key := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
+	caPublicKey := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
 
-	var fabric_big_endian bytes.Buffer
-	binary.Write(&fabric_big_endian, binary.BigEndian, fabric.id)
+	var fabricBigEndian bytes.Buffer
+	binary.Write(&fabricBigEndian, binary.BigEndian, fabric.id)
 
-	key := hkdf_sha256(capublic_key[1:], fabric_big_endian.Bytes(), []byte("CompressedFabric"), 8)
+	key := hkdfSHA256(caPublicKey[1:], fabricBigEndian.Bytes(), []byte("CompressedFabric"), 8)
 	return key
 }
-func (fabric Fabric) make_ipk() []byte {
-	key := hkdf_sha256(fabric.ipk, fabric.CompressedFabric(), []byte("GroupKey v1.0"), 16)
+
+func (fabric Fabric) makeIPK() []byte {
+	key := hkdfSHA256(fabric.ipk, fabric.CompressedFabric(), []byte("GroupKey v1.0"), 16)
 	return key
 }
 

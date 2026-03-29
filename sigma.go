@@ -14,20 +14,20 @@ import (
 )
 
 type sigmaContext struct {
-	session_privkey               *ecdh.PrivateKey
-	session                       int
-	controller_key                *ecdsa.PrivateKey
-	controller_matter_certificate []byte
+	sessionPrivkey              *ecdh.PrivateKey
+	session                     int
+	controllerKey               *ecdsa.PrivateKey
+	controllerMatterCertificate []byte
 
-	i2rkey []byte
-	r2ikey []byte
+	i2rKey []byte
+	r2iKey []byte
 
-	sigma2dec     DecodedGeneric
-	sigma1payload []byte
+	sigma2Dec     DecodedGeneric
+	sigma1Payload []byte
 	exchange      uint16
 }
 
-func (sc *sigmaContext) genSigma1(fabric *Fabric, device_id uint64) {
+func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) {
 	var tlvx mattertlv.TLVBuffer
 	tlvx.WriteAnonStruct()
 
@@ -38,32 +38,32 @@ func (sc *sigmaContext) genSigma1(fabric *Fabric, device_id uint64) {
 	sessionId := 222
 	tlvx.WriteUInt(2, mattertlv.TYPE_UINT_2, uint64(sessionId))
 
-	var destination_message bytes.Buffer
-	destination_message.Write(initiatorRandom)
+	var destinationMessage bytes.Buffer
+	destinationMessage.Write(initiatorRandom)
 	//cacert := ca.LoadCert("ca-cert.pem")
 	cacert := fabric.CertificateManager.GetCaCertificate()
 	capub := cacert.PublicKey.(*ecdsa.PublicKey)
-	capublic_key := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
+	caPublicKey := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
 
-	destination_message.Write(capublic_key)
+	destinationMessage.Write(caPublicKey)
 
-	var fabric_id uint64
-	fabric_id = fabric.id
-	binary.Write(&destination_message, binary.LittleEndian, fabric_id)
+	var fabricID uint64
+	fabricID = fabric.id
+	binary.Write(&destinationMessage, binary.LittleEndian, fabricID)
 
 	var node uint64
-	node = device_id
-	binary.Write(&destination_message, binary.LittleEndian, node)
+	node = deviceID
+	binary.Write(&destinationMessage, binary.LittleEndian, node)
 
-	key := fabric.make_ipk()
+	key := fabric.makeIPK()
 
-	destinationIdentifier := hmac_sha256_enc(destination_message.Bytes(), key)
+	destinationIdentifier := hmacSHA256Enc(destinationMessage.Bytes(), key)
 
 	tlvx.WriteOctetString(3, destinationIdentifier)
 
-	tlvx.WriteOctetString(4, sc.session_privkey.PublicKey().Bytes())
+	tlvx.WriteOctetString(4, sc.sessionPrivkey.PublicKey().Bytes())
 	tlvx.WriteStructEnd()
-	sc.sigma1payload = tlvx.Bytes()
+	sc.sigma1Payload = tlvx.Bytes()
 }
 
 func genSigma1Req2(payload []byte, exchange uint16) []byte {
@@ -95,50 +95,50 @@ func genSigma3Req2(payload []byte, exchange uint16) []byte {
 }
 
 func (sc *sigmaContext) sigma3(fabric *Fabric) ([]byte, error) {
-	var tlv_s3tbs mattertlv.TLVBuffer
-	tlv_s3tbs.WriteAnonStruct()
-	tlv_s3tbs.WriteOctetString(1, sc.controller_matter_certificate)
-	tlv_s3tbs.WriteOctetString(3, sc.session_privkey.PublicKey().Bytes())
-	responder_public := sc.sigma2dec.Tlv.GetOctetStringRec([]int{3})
-	sigma2responder_session, err := sc.sigma2dec.Tlv.GetIntRec([]int{2})
+	var tlvS3TBS mattertlv.TLVBuffer
+	tlvS3TBS.WriteAnonStruct()
+	tlvS3TBS.WriteOctetString(1, sc.controllerMatterCertificate)
+	tlvS3TBS.WriteOctetString(3, sc.sessionPrivkey.PublicKey().Bytes())
+	responderPublic := sc.sigma2Dec.Tlv.GetOctetStringRec([]int{3})
+	sigma2ResponderSession, err := sc.sigma2Dec.Tlv.GetIntRec([]int{2})
 	if err != nil {
 		return []byte{}, err
 	}
-	tlv_s3tbs.WriteOctetString(4, responder_public)
-	tlv_s3tbs.WriteStructEnd()
-	//log.Printf("responder public %s\n", hex.EncodeToString(responder_public))
+	tlvS3TBS.WriteOctetString(4, responderPublic)
+	tlvS3TBS.WriteStructEnd()
+	//log.Printf("responder public %s\n", hex.EncodeToString(responderPublic))
 
-	tlv_s3tbs_hash := sha256_enc(tlv_s3tbs.Bytes())
-	sr, ss, err := ecdsa.Sign(rand.Reader, sc.controller_key, tlv_s3tbs_hash)
+	tlvS3TBSHash := sha256Enc(tlvS3TBS.Bytes())
+	sr, ss, err := ecdsa.Sign(rand.Reader, sc.controllerKey, tlvS3TBSHash)
 	if err != nil {
 		return []byte{}, err
 	}
-	tlv_s3tbs_out := append(sr.Bytes(), ss.Bytes()...)
+	tlvS3TBSOut := append(sr.Bytes(), ss.Bytes()...)
 
-	var tlv_s3tbe mattertlv.TLVBuffer
-	tlv_s3tbe.WriteAnonStruct()
-	tlv_s3tbe.WriteOctetString(1, sc.controller_matter_certificate)
-	tlv_s3tbe.WriteOctetString(3, tlv_s3tbs_out)
-	tlv_s3tbe.WriteStructEnd()
+	var tlvS3TBE mattertlv.TLVBuffer
+	tlvS3TBE.WriteAnonStruct()
+	tlvS3TBE.WriteOctetString(1, sc.controllerMatterCertificate)
+	tlvS3TBE.WriteOctetString(3, tlvS3TBSOut)
+	tlvS3TBE.WriteStructEnd()
 
-	pub, err := ecdh.P256().NewPublicKey(responder_public)
+	pub, err := ecdh.P256().NewPublicKey(responderPublic)
 	if err != nil {
 		return []byte{}, err
 	}
-	shared_secret, err := sc.session_privkey.ECDH(pub)
+	sharedSecret, err := sc.sessionPrivkey.ECDH(pub)
 	if err != nil {
 		return []byte{}, err
 	}
-	s3k_th := sc.sigma1payload
-	s3k_th = append(s3k_th, sc.sigma2dec.Payload...)
+	s3KTranscript := sc.sigma1Payload
+	s3KTranscript = append(s3KTranscript, sc.sigma2Dec.Payload...)
 
-	transcript_hash := sha256_enc(s3k_th)
-	s3_salt := fabric.make_ipk()
-	s3_salt = append(s3_salt, transcript_hash...)
+	transcriptHash := sha256Enc(s3KTranscript)
+	s3Salt := fabric.makeIPK()
+	s3Salt = append(s3Salt, transcriptHash...)
 
-	s3k := hkdf_sha256(shared_secret, s3_salt, []byte("Sigma3"), 16)
+	s3Key := hkdfSHA256(sharedSecret, s3Salt, []byte("Sigma3"), 16)
 
-	c, err := aes.NewCipher(s3k)
+	c, err := aes.NewCipher(s3Key)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -147,27 +147,27 @@ func (sc *sigmaContext) sigma3(fabric *Fabric) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	CipherText := ccm.Seal(nil, nonce, tlv_s3tbe.Bytes(), []byte{})
+	cipherText := ccm.Seal(nil, nonce, tlvS3TBE.Bytes(), []byte{})
 
-	var tlv_s3 mattertlv.TLVBuffer
-	tlv_s3.WriteAnonStruct()
-	tlv_s3.WriteOctetString(1, CipherText)
-	tlv_s3.WriteStructEnd()
+	var tlvS3 mattertlv.TLVBuffer
+	tlvS3.WriteAnonStruct()
+	tlvS3.WriteOctetString(1, cipherText)
+	tlvS3.WriteStructEnd()
 
-	to_send := genSigma3Req2(tlv_s3.Bytes(), sc.exchange)
+	toSend := genSigma3Req2(tlvS3.Bytes(), sc.exchange)
 
 	// prepare session keys
-	ses_key_transcript := s3k_th
-	ses_key_transcript = append(ses_key_transcript, tlv_s3.Bytes()...)
-	transcript_hash = sha256_enc(ses_key_transcript)
-	salt := fabric.make_ipk()
-	salt = append(salt, transcript_hash...)
+	sessionKeyTranscript := s3KTranscript
+	sessionKeyTranscript = append(sessionKeyTranscript, tlvS3.Bytes()...)
+	transcriptHash = sha256Enc(sessionKeyTranscript)
+	salt := fabric.makeIPK()
+	salt = append(salt, transcriptHash...)
 
-	keypack := hkdf_sha256(shared_secret, salt, []byte("SessionKeys"), 16*3)
-	sc.session = sigma2responder_session
+	keypack := hkdfSHA256(sharedSecret, salt, []byte("SessionKeys"), 16*3)
+	sc.session = sigma2ResponderSession
 
-	sc.i2rkey = keypack[:16]
-	sc.r2ikey = keypack[16:32]
+	sc.i2rKey = keypack[:16]
+	sc.r2iKey = keypack[16:32]
 
-	return to_send, nil
+	return toSend, nil
 }

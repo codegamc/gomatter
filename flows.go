@@ -19,161 +19,161 @@ import (
 // This uses SPAKE2+ protocol
 func spake2pExchange(ctx context.Context, pin int, udp *udpChannel, receiveTimeout time.Duration) (*SecureChannel, error) {
 	exchange := uint16(randm.Intn(0xffff))
-	secure_channel := newSecureChannel(udp)
-	secure_channel.SetReceiveTimeout(receiveTimeout)
-	secure_channel.session = 0
-	secure_channel.Counter = uint32(randm.Intn(0xffffffff))
+	secureChannel := newSecureChannel(udp)
+	secureChannel.SetReceiveTimeout(receiveTimeout)
+	secureChannel.session = 0
+	secureChannel.Counter = uint32(randm.Intn(0xffffffff))
 
-	pbkdf_request := pBKDFParamRequest(exchange)
-	secure_channel.Send(pbkdf_request)
+	pbkdfRequest := pBKDFParamRequest(exchange)
+	secureChannel.Send(pbkdfRequest)
 
-	pbkdf_responseS, err := secure_channel.Receive(ctx)
+	pbkdfResponseS, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("pbkdf response not received: %s", err.Error())
 	}
-	if pbkdf_responseS.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_PBKDF_RESP {
-		return nil, fmt.Errorf("SEC_CHAN_OPCODE_PBKDF_RESP not received")
+	if pbkdfResponseS.ProtocolHeader.Opcode != SecChanOpcodePBKDFResp {
+		return nil, fmt.Errorf("SecChanOpcodePBKDFResp not received")
 	}
-	pbkdf_response_salt := pbkdf_responseS.Tlv.GetOctetStringRec([]int{4, 2})
-	pbkdf_response_iterations, err := pbkdf_responseS.Tlv.GetIntRec([]int{4, 1})
+	pbkdfResponseSalt := pbkdfResponseS.Tlv.GetOctetStringRec([]int{4, 2})
+	pbkdfResponseIterations, err := pbkdfResponseS.Tlv.GetIntRec([]int{4, 1})
 	if err != nil {
 		return nil, fmt.Errorf("can't get pbkdf_response_iterations")
 	}
-	pbkdf_response_session, err := pbkdf_responseS.Tlv.GetIntRec([]int{3})
+	pbkdfResponseSession, err := pbkdfResponseS.Tlv.GetIntRec([]int{3})
 	if err != nil {
 		return nil, fmt.Errorf("can't get pbkdf_response_session")
 	}
 
 	sctx := NewSpakeCtx()
-	sctx.Gen_w(pin, pbkdf_response_salt, pbkdf_response_iterations)
-	sctx.Gen_random_X()
-	sctx.Calc_X()
+	sctx.GenerateW(pin, pbkdfResponseSalt, pbkdfResponseIterations)
+	sctx.GenerateRandomX()
+	sctx.CalculateX()
 
-	pake1 := pake1ParamRequest(exchange, sctx.X.As_bytes())
-	secure_channel.Send(pake1)
+	pake1 := pake1ParamRequest(exchange, sctx.X.AsBytes())
+	secureChannel.Send(pake1)
 
-	pake2s, err := secure_channel.Receive(ctx)
+	pake2s, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("pake2 not received: %s", err.Error())
 	}
-	if pake2s.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_PAKE2 {
-		return nil, fmt.Errorf("SEC_CHAN_OPCODE_PAKE2 not received")
+	if pake2s.ProtocolHeader.Opcode != SecChanOpcodePAKE2 {
+		return nil, fmt.Errorf("SecChanOpcodePAKE2 not received")
 	}
 	//pake2s.tlv.Dump(1)
-	pake2_pb := pake2s.Tlv.GetOctetStringRec([]int{1})
+	pake2PB := pake2s.Tlv.GetOctetStringRec([]int{1})
 
-	sctx.Y.from_bytes(pake2_pb)
-	sctx.calc_ZV()
+	sctx.Y.fromBytes(pake2PB)
+	sctx.calculateZV()
 	ttseed := []byte("CHIP PAKE V1 Commissioning")
-	ttseed = append(ttseed, pbkdf_request[6:]...) // 6 is size of proto header
-	ttseed = append(ttseed, pbkdf_responseS.Payload...)
-	err = sctx.calc_hash(ttseed)
+	ttseed = append(ttseed, pbkdfRequest[6:]...) // 6 is size of proto header
+	ttseed = append(ttseed, pbkdfResponseS.Payload...)
+	err = sctx.calculateHash(ttseed)
 	if err != nil {
 		return nil, err
 	}
 
 	pake3 := pake3ParamRequest(exchange, sctx.cA)
-	secure_channel.Send(pake3)
+	secureChannel.Send(pake3)
 
-	status_report, err := secure_channel.Receive(ctx)
+	statusReport, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if status_report.StatusReport.ProtocolCode != 0 {
-		return nil, fmt.Errorf("pake3 is not success code: %d", status_report.StatusReport.ProtocolCode)
+	if statusReport.StatusReport.ProtocolCode != 0 {
+		return nil, fmt.Errorf("pake3 is not success code: %d", statusReport.StatusReport.ProtocolCode)
 	}
 
-	secure_channel = newSecureChannel(udp)
-	secure_channel.SetReceiveTimeout(receiveTimeout)
-	secure_channel.decrypt_key = sctx.decrypt_key
-	secure_channel.encrypt_key = sctx.encrypt_key
-	secure_channel.remote_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	secure_channel.local_node = []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	secure_channel.session = pbkdf_response_session
+	secureChannel = newSecureChannel(udp)
+	secureChannel.SetReceiveTimeout(receiveTimeout)
+	secureChannel.decryptKey = sctx.decryptKey
+	secureChannel.encryptKey = sctx.encryptKey
+	secureChannel.remoteNode = []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	secureChannel.localNode = []byte{0, 0, 0, 0, 0, 0, 0, 0}
+	secureChannel.session = pbkdfResponseSession
 
-	return secure_channel, nil
+	return secureChannel, nil
 }
 
 // SigmaExhange establishes secure session using CASE (Certificate Authenticated Session Establishment)
-func SigmaExchange(ctx context.Context, fabric *Fabric, controller_id uint64, device_id uint64, secure_channel *SecureChannel) (*SecureChannel, error) {
+func SigmaExchange(ctx context.Context, fabric *Fabric, controllerID uint64, deviceID uint64, secureChannel *SecureChannel) (*SecureChannel, error) {
 
-	controller_privkey, _ := ecdh.P256().GenerateKey(rand.Reader)
-	sigma_context := sigmaContext{
-		session_privkey: controller_privkey,
-		exchange:        uint16(randm.Intn(0xffff)),
+	controllerPrivkey, _ := ecdh.P256().GenerateKey(rand.Reader)
+	sigmaContext := sigmaContext{
+		sessionPrivkey: controllerPrivkey,
+		exchange:       uint16(randm.Intn(0xffff)),
 	}
-	sigma_context.genSigma1(fabric, device_id)
-	sigma1 := genSigma1Req2(sigma_context.sigma1payload, sigma_context.exchange)
-	secure_channel.Send(sigma1)
+	sigmaContext.genSigma1(fabric, deviceID)
+	sigma1 := genSigma1Req2(sigmaContext.sigma1Payload, sigmaContext.exchange)
+	secureChannel.Send(sigma1)
 
 	var err error
-	sigma_context.sigma2dec, err = secure_channel.Receive(ctx)
+	sigmaContext.sigma2Dec, err = secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if (sigma_context.sigma2dec.ProtocolHeader.ProtocolId == ProtocolIdSecureChannel) &&
-		(sigma_context.sigma2dec.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_STATUS_REP) {
-		return nil, fmt.Errorf("sigma2 not received. status: %x %x", sigma_context.sigma2dec.StatusReport.GeneralCode,
-			sigma_context.sigma2dec.StatusReport.ProtocolCode)
+	if (sigmaContext.sigma2Dec.ProtocolHeader.ProtocolId == ProtocolIdSecureChannel) &&
+		(sigmaContext.sigma2Dec.ProtocolHeader.Opcode == SecChanOpcodeStatusRep) {
+		return nil, fmt.Errorf("sigma2 not received. status: %x %x", sigmaContext.sigma2Dec.StatusReport.GeneralCode,
+			sigmaContext.sigma2Dec.StatusReport.ProtocolCode)
 	}
-	if sigma_context.sigma2dec.ProtocolHeader.Opcode != 0x31 {
+	if sigmaContext.sigma2Dec.ProtocolHeader.Opcode != 0x31 {
 		return nil, fmt.Errorf("sigma2 not received")
 	}
 
-	sigma_context.controller_key, err = fabric.CertificateManager.GetPrivkey(controller_id)
+	sigmaContext.controllerKey, err = fabric.CertificateManager.GetPrivkey(controllerID)
 	if err != nil {
 		return nil, err
 	}
-	controller_cert, err := fabric.CertificateManager.GetCertificate(controller_id)
+	controllerCert, err := fabric.CertificateManager.GetCertificate(controllerID)
 	if err != nil {
 		return nil, err
 	}
-	sigma_context.controller_matter_certificate = SerializeCertificateIntoMatter(fabric, controller_cert)
+	sigmaContext.controllerMatterCertificate = SerializeCertificateIntoMatter(fabric, controllerCert)
 
-	to_send, err := sigma_context.sigma3(fabric)
+	toSend, err := sigmaContext.sigma3(fabric)
 	if err != nil {
 		return nil, err
 	}
-	secure_channel.Send(to_send)
+	secureChannel.Send(toSend)
 
-	sigma_result, err := secure_channel.Receive(ctx)
+	sigmaResult, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if sigma_result.ProtocolHeader.Opcode != SEC_CHAN_OPCODE_STATUS_REP {
-		return nil, fmt.Errorf("unexpected message (opcode:0x%x)", sigma_result.ProtocolHeader.Opcode)
+	if sigmaResult.ProtocolHeader.Opcode != SecChanOpcodeStatusRep {
+		return nil, fmt.Errorf("unexpected message (opcode:0x%x)", sigmaResult.ProtocolHeader.Opcode)
 	}
-	if !sigma_result.StatusReport.IsOk() {
+	if !sigmaResult.StatusReport.IsOk() {
 		return nil, fmt.Errorf("sigma result is not ok %d %d %d",
-			sigma_result.StatusReport.GeneralCode,
-			sigma_result.StatusReport.ProtocolId, sigma_result.StatusReport.ProtocolCode)
+			sigmaResult.StatusReport.GeneralCode,
+			sigmaResult.StatusReport.ProtocolId, sigmaResult.StatusReport.ProtocolCode)
 	}
 
-	secure_channel.decrypt_key = sigma_context.r2ikey
-	secure_channel.encrypt_key = sigma_context.i2rkey
-	secure_channel.remote_node = id_to_bytes(device_id)
-	secure_channel.local_node = id_to_bytes(controller_id)
-	secure_channel.session = sigma_context.session
-	return secure_channel, nil
+	secureChannel.decryptKey = sigmaContext.r2iKey
+	secureChannel.encryptKey = sigmaContext.i2rKey
+	secureChannel.remoteNode = idToBytes(deviceID)
+	secureChannel.localNode = idToBytes(controllerID)
+	secureChannel.session = sigmaContext.session
+	return secureChannel, nil
 }
 
-// Commission performs commissioning procedure on device with device_ip ip address
+// Commission performs commissioning procedure on device with deviceIP ip address.
 //   - fabric is fabric object with approriate certificate authority
 //   - pin is passcode used for device pairing
-//   - controller_id is identifier of node whioch will be owner/admin of this device
-//   - device_id_id is identifier of "new" device
-func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, controller_id, device_id uint64, opts ...Option) error {
+//   - controllerID is identifier of node whioch will be owner/admin of this device
+//   - deviceID is identifier of "new" device
+func Commission(ctx context.Context, fabric *Fabric, deviceIP net.IP, pin int, controllerID, deviceID uint64, opts ...Option) error {
 	o := applyOptions(opts)
 
-	channel, err := startUdpChannel(device_ip, o.remotePort, o.localPort)
+	channel, err := startUDPChannel(deviceIP, o.remotePort, o.localPort)
 	if err != nil {
 		return err
 	}
-	secure_channel := newSecureChannel(channel)
-	secure_channel.SetReceiveTimeout(o.receiveTimeout)
-	defer secure_channel.Close()
+	secureChannel := newSecureChannel(channel)
+	secureChannel.SetReceiveTimeout(o.receiveTimeout)
+	defer secureChannel.Close()
 
-	secure_channel, err = spake2pExchange(ctx, pin, channel, o.receiveTimeout)
+	secureChannel, err = spake2pExchange(ctx, pin, channel, o.receiveTimeout)
 	if err != nil {
 		return err
 	}
@@ -181,15 +181,15 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 	// send csr request
 	var tlvb mattertlv.TLVBuffer
 	tlvb.WriteOctetString(0, CreateRandomBytes(32))
-	to_send := EncodeIMInvokeRequest(0, 0x3e, 4, tlvb.Bytes(), false, uint16(randm.Intn(0xffff)))
-	secure_channel.Send(to_send)
+	toSend := EncodeIMInvokeRequest(0, 0x3e, 4, tlvb.Bytes(), false, uint16(randm.Intn(0xffff)))
+	secureChannel.Send(toSend)
 
-	csr_resp, err := secure_channel.Receive(ctx)
+	csrResp, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return err
 	}
 
-	nocsr := csr_resp.Tlv.GetOctetStringRec([]int{1, 0, 0, 1, 0})
+	nocsr := csrResp.Tlv.GetOctetStringRec([]int{1, 0, 0, 1, 0})
 	if len(nocsr) == 0 {
 		return fmt.Errorf("nocsr not received")
 	}
@@ -203,10 +203,10 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 	//AddTrustedRootCertificate
 	var tlv4 mattertlv.TLVBuffer
 	tlv4.WriteOctetString(0, SerializeCertificateIntoMatter(fabric, fabric.CertificateManager.GetCaCertificate()))
-	to_send = EncodeIMInvokeRequest(0, 0x3e, 0xb, tlv4.Bytes(), false, uint16(randm.Intn(0xffff)))
-	secure_channel.Send(to_send)
+	toSend = EncodeIMInvokeRequest(0, 0x3e, 0xb, tlv4.Bytes(), false, uint16(randm.Intn(0xffff)))
+	secureChannel.Send(toSend)
 
-	resp, err := secure_channel.Receive(ctx)
+	resp, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -219,22 +219,22 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 	}
 
 	//noc_x509 := sign_cert(csrp, 2, "user")
-	noc_x509, err := fabric.CertificateManager.SignCertificate(csrp.PublicKey.(*ecdsa.PublicKey), device_id)
+	nocX509, err := fabric.CertificateManager.SignCertificate(csrp.PublicKey.(*ecdsa.PublicKey), deviceID)
 	if err != nil {
 		return err
 	}
-	noc_matter := SerializeCertificateIntoMatter(fabric, noc_x509)
+	nocMatter := SerializeCertificateIntoMatter(fabric, nocX509)
 	//AddNOC
 	var tlv5 mattertlv.TLVBuffer
-	tlv5.WriteOctetString(0, noc_matter)
+	tlv5.WriteOctetString(0, nocMatter)
 	tlv5.WriteOctetString(2, fabric.ipk) //ipk
-	tlv5.WriteUInt64(3, controller_id)   // admin subject !
+	tlv5.WriteUInt64(3, controllerID)    // admin subject !
 	tlv5.WriteUInt16(4, 101)             // admin vendorid ??
-	to_send = EncodeIMInvokeRequest(0, 0x3e, 0x6, tlv5.Bytes(), false, uint16(randm.Intn(0xffff)))
+	toSend = EncodeIMInvokeRequest(0, 0x3e, 0x6, tlv5.Bytes(), false, uint16(randm.Intn(0xffff)))
 
-	secure_channel.Send(to_send)
+	secureChannel.Send(toSend)
 
-	resp, err = secure_channel.Receive(ctx)
+	resp, err = secureChannel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -246,20 +246,20 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 		return fmt.Errorf("unexpected status to AddNOC %d", resp_status_add_noc)
 	}
 
-	secure_channel.decrypt_key = []byte{}
-	secure_channel.encrypt_key = []byte{}
-	secure_channel.session = 0
+	secureChannel.decryptKey = []byte{}
+	secureChannel.encryptKey = []byte{}
+	secureChannel.session = 0
 
-	secure_channel, err = SigmaExchange(ctx, fabric, controller_id, device_id, secure_channel)
+	secureChannel, err = SigmaExchange(ctx, fabric, controllerID, deviceID, secureChannel)
 	if err != nil {
 		return err
 	}
 
 	//commissioning complete
-	to_send = EncodeIMInvokeRequest(0, 0x30, 4, []byte{}, false, uint16(randm.Intn(0xffff)))
-	secure_channel.Send(to_send)
+	toSend = EncodeIMInvokeRequest(0, 0x30, 4, []byte{}, false, uint16(randm.Intn(0xffff)))
+	secureChannel.Send(toSend)
 
-	respx, err := secure_channel.Receive(ctx)
+	respx, err := secureChannel.Receive(ctx)
 	if err != nil {
 		return err
 	}
@@ -275,16 +275,16 @@ func Commission(ctx context.Context, fabric *Fabric, device_ip net.IP, pin int, 
 	return nil
 }
 
-func ConnectDevice(ctx context.Context, device_ip net.IP, port int, fabric *Fabric, device_id, admin_id uint64, opts ...Option) (*SecureChannel, error) {
+func ConnectDevice(ctx context.Context, deviceIP net.IP, port int, fabric *Fabric, deviceID, adminID uint64, opts ...Option) (*SecureChannel, error) {
 	o := applyOptions(opts)
-	var secure_channel *SecureChannel
+	var secureChannel *SecureChannel
 	var err error
-	if secure_channel, err = StartSecureChannel(device_ip, port, o.localPort); err != nil {
+	if secureChannel, err = StartSecureChannel(deviceIP, port, o.localPort); err != nil {
 		return nil, err
 	}
-	secure_channel.SetReceiveTimeout(o.receiveTimeout)
-	if secure_channel, err = SigmaExchange(ctx, fabric, admin_id, device_id, secure_channel); err != nil {
+	secureChannel.SetReceiveTimeout(o.receiveTimeout)
+	if secureChannel, err = SigmaExchange(ctx, fabric, adminID, deviceID, secureChannel); err != nil {
 		return nil, err
 	}
-	return secure_channel, nil
+	return secureChannel, nil
 }

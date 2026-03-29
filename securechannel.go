@@ -15,18 +15,18 @@ import (
 )
 
 type udpChannel struct {
-	Udp            net.PacketConn
-	Remote_address net.UDPAddr
+	Udp           net.PacketConn
+	RemoteAddress net.UDPAddr
 }
 
-func startUdpChannel(remote_ip net.IP, remote_port, local_port int) (*udpChannel, error) {
+func startUDPChannel(remoteIP net.IP, remotePort, localPort int) (*udpChannel, error) {
 	var out *udpChannel = new(udpChannel)
-	out.Remote_address = net.UDPAddr{
-		IP:   remote_ip,
-		Port: remote_port,
+	out.RemoteAddress = net.UDPAddr{
+		IP:   remoteIP,
+		Port: remotePort,
 	}
 	var err error
-	out.Udp, err = net.ListenPacket("udp", fmt.Sprintf(":%d", local_port))
+	out.Udp, err = net.ListenPacket("udp", fmt.Sprintf(":%d", localPort))
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func startUdpChannel(remote_ip net.IP, remote_port, local_port int) (*udpChannel
 }
 
 func (ch *udpChannel) send(data []byte) error {
-	_, err := ch.Udp.WriteTo(data, &ch.Remote_address)
+	_, err := ch.Udp.WriteTo(data, &ch.RemoteAddress)
 	return err
 }
 func (ch *udpChannel) receive() ([]byte, error) {
@@ -46,7 +46,7 @@ func (ch *udpChannel) receive() ([]byte, error) {
 	return buf[:n], nil
 }
 
-func make_nonce3(counter uint32, node []byte) []byte {
+func makeNonce3(counter uint32, node []byte) []byte {
 	var n bytes.Buffer
 	n.WriteByte(0)
 	binary.Write(&n, binary.LittleEndian, counter)
@@ -56,10 +56,10 @@ func make_nonce3(counter uint32, node []byte) []byte {
 
 type SecureChannel struct {
 	Udp            *udpChannel
-	encrypt_key    []byte
-	decrypt_key    []byte
-	remote_node    []byte
-	local_node     []byte
+	encryptKey     []byte
+	decryptKey     []byte
+	remoteNode     []byte
+	localNode      []byte
 	Counter        uint32
 	session        int
 	receiveTimeout time.Duration
@@ -77,8 +77,8 @@ func newSecureChannel(udp *udpChannel) *SecureChannel {
 // StartSecureChannel initializes secure channel for plain unencrypted communication.
 // It initializes UDP interface and blocks local udp port.
 // Secure channel becomes encrypted after encryption keys are supplied.
-func StartSecureChannel(remote_ip net.IP, remote_port, local_port int) (*SecureChannel, error) {
-	udp, err := startUdpChannel(remote_ip, remote_port, local_port)
+func StartSecureChannel(remoteIP net.IP, remotePort, localPort int) (*SecureChannel, error) {
+	udp, err := startUDPChannel(remoteIP, remotePort, localPort)
 	if err != nil {
 		return nil, err
 	}
@@ -145,9 +145,9 @@ func (sc *SecureChannel) receive(ctx context.Context) (DecodedGeneric, error) {
 	add := data[:len(data)-decode_buffer.Len()]
 	proto := decode_buffer.Bytes()
 
-	if len(sc.decrypt_key) > 0 {
-		nonce := make_nonce3(out.MessageHeader.messageCounter, sc.remote_node)
-		c, err := aes.NewCipher(sc.decrypt_key)
+	if len(sc.decryptKey) > 0 {
+		nonce := makeNonce3(out.MessageHeader.messageCounter, sc.remoteNode)
+		c, err := aes.NewCipher(sc.decryptKey)
 		if err != nil {
 			return DecodedGeneric{}, err
 		}
@@ -180,7 +180,7 @@ func (sc *SecureChannel) receive(ctx context.Context) (DecodedGeneric, error) {
 	}
 
 	if out.ProtocolHeader.ProtocolId == 0 {
-		if out.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_ACK { // standalone ack
+		if out.ProtocolHeader.Opcode == SecChanOpcodeAck { // standalone ack
 			return sc.receive(ctx)
 		}
 	}
@@ -189,7 +189,7 @@ func (sc *SecureChannel) receive(ctx context.Context) (DecodedGeneric, error) {
 	sc.Send(ack)
 
 	if out.ProtocolHeader.ProtocolId == 0 {
-		if out.ProtocolHeader.Opcode == SEC_CHAN_OPCODE_STATUS_REP { // status report
+		if out.ProtocolHeader.Opcode == SecChanOpcodeStatusRep { // status report
 			buf := bytes.NewBuffer(out.Payload)
 			binary.Read(buf, binary.LittleEndian, &out.StatusReport.GeneralCode)
 			binary.Read(buf, binary.LittleEndian, &out.StatusReport.ProtocolId)
@@ -217,16 +217,16 @@ func (sc *SecureChannel) Send(data []byte) error {
 		sourceNodeId:   []byte{1, 2, 3, 4, 5, 6, 7, 8},
 	}
 	msg.Encode(&buffer)
-	if len(sc.encrypt_key) == 0 {
+	if len(sc.encryptKey) == 0 {
 		buffer.Write(data)
 	} else {
-		header_slice := buffer.Bytes()
-		add2 := make([]byte, len(header_slice))
-		copy(add2, header_slice)
+		headerSlice := buffer.Bytes()
+		add2 := make([]byte, len(headerSlice))
+		copy(add2, headerSlice)
 
-		nonce := make_nonce3(sc.Counter, sc.local_node)
+		nonce := makeNonce3(sc.Counter, sc.localNode)
 
-		c, err := aes.NewCipher(sc.encrypt_key)
+		c, err := aes.NewCipher(sc.encryptKey)
 		if err != nil {
 			return err
 		}
