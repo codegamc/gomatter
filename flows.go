@@ -41,7 +41,7 @@ func Spake2pExchange(pin int, udp *udpChannel) (SecureChannel, error) {
 		return SecureChannel{}, fmt.Errorf("can't get pbkdf_response_session")
 	}
 
-	sctx := NewSpaceCtx()
+	sctx := NewSpakeCtx()
 	sctx.Gen_w(pin, pbkdf_response_salt, int(pbkdf_response_iterations))
 	sctx.Gen_random_X()
 	sctx.Calc_X()

@@ -275,7 +275,7 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 	}
 	salt := gomat.CreateRandomBytes(32)
 	iterations := 1000
-	sctx := gomat.NewSpaceCtx()
+	sctx := gomat.NewSpakeCtx()
 	sctx.Gen_w(int(pin), salt, iterations)
 	sctx.Gen_random_X()
 	sctx.Gen_random_Y()

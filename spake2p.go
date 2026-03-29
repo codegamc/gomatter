@@ -171,8 +171,13 @@ func (ctx *SpakeCtx) calc_hash(seed []byte) error {
 	return nil
 }
 
-func NewSpaceCtx() SpakeCtx {
+func NewSpakeCtx() SpakeCtx {
 	return SpakeCtx{
 		curve: elliptic.P256(),
 	}
+}
+
+// Deprecated: use NewSpakeCtx.
+func NewSpaceCtx() SpakeCtx {
+	return NewSpakeCtx()
 }
