@@ -13,7 +13,7 @@ The goal is to create golang library and supporting tools to access matter devic
   - commission devices
   - send commands to devices
   - read attributes from devices
-  - subscribe and receive events
+  - subscribe and receive events or attributes
   - decode onboarding info (qr text, manual pair code)
   - discover commissionable devices
   - discover commissioned devices
@@ -65,12 +65,18 @@ go build -o gomat demo/main.go
   `./gomat cmd on --ip 192.168.5.178 --controller-id 100 --device-id 500`
 - set color hue=150 saturation=200 transition_time=10
   `./gomat cmd color --ip 192.168.5.220 --controller-id 100 --device-id 500 150 200 10`
+- subscribe to a Matter event
+  `./gomat cmd subscribe --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x101 1`
+- subscribe to an attribute report
+  `./gomat cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
 
 
 ### how to use api
 #### Example applications
 - [Simple Example application](examples/basic/basic-main.go) - bootstrap ca, commission, send commands to device
 - [Demo application](demo/main.go)
+
+For low-level subscriptions, use `EncodeIMSubscribeRequest` for event subscriptions and `EncodeIMSubscribeAttributeRequest` for attribute subscriptions.
 
 #### commission device using api
 create ca with root certificate, create admin user, then commission device:

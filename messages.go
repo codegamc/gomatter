@@ -349,21 +349,51 @@ func EncodeIMReadRequest(endpoint uint16, cluster uint32, attr uint32) []byte {
 	return buffer.Bytes()
 }
 
-// EncodeIMInvokeRequest encodes Interaction Model Read Request message
-func EncodeIMSubscribeRequest(endpoint uint16, cluster uint32, event uint32) []byte {
+type subscribeRequestKind int
+
+const (
+	subscribeRequestKindEvent subscribeRequestKind = iota
+	subscribeRequestKindAttribute
+)
+
+type subscribeRequest struct {
+	kind     subscribeRequestKind
+	endpoint uint16
+	cluster  uint32
+	id       uint32
+}
+
+func (r subscribeRequest) encodePayload(tlv *mattertlv.TLVBuffer) {
+	switch r.kind {
+	case subscribeRequestKindEvent:
+		tlv.WriteArray(4)
+		tlv.WriteAnonList()
+		tlv.WriteUInt16(1, r.endpoint)
+		tlv.WriteUInt32(2, r.cluster)
+		tlv.WriteUInt32(3, r.id)
+		tlv.WriteBool(4, true) // urgent
+		tlv.WriteStructEnd()
+		tlv.WriteStructEnd()
+	case subscribeRequestKindAttribute:
+		tlv.WriteArray(3)
+		tlv.WriteAnonList()
+		tlv.WriteUInt16(2, r.endpoint)
+		tlv.WriteUInt32(3, r.cluster)
+		tlv.WriteUInt32(4, r.id)
+		tlv.WriteStructEnd()
+		tlv.WriteStructEnd()
+	default:
+		panic("unsupported subscribe request kind")
+	}
+}
+
+func encodeIMSubscribeRequest(req subscribeRequest) []byte {
 	var tlv mattertlv.TLVBuffer
 	tlv.WriteAnonStruct()
 	tlv.WriteBool(0, false) // keep
 	tlv.WriteUInt16(1, 10)  // min interval
 	tlv.WriteUInt16(2, 50)  // max interval
-	tlv.WriteArray(4)
-	tlv.WriteAnonList()
-	tlv.WriteUInt16(1, endpoint)
-	tlv.WriteUInt32(2, cluster)
-	tlv.WriteUInt32(3, event)
-	tlv.WriteBool(4, true) // urgent
-	tlv.WriteStructEnd()
-	tlv.WriteStructEnd()
+	req.encodePayload(&tlv)
 	/*tlvx.WriteArray(5)
 		tlvx.WriteAnonStruct()
 				tlvx.WriteUInt(0, mattertlv.TYPE_UINT_1, uint64(100))
@@ -386,6 +416,26 @@ func EncodeIMSubscribeRequest(endpoint uint16, cluster uint32, event uint32) []b
 	buffer.Write(tlv.Bytes())
 
 	return buffer.Bytes()
+}
+
+// EncodeIMSubscribeRequest encodes an Interaction Model Subscribe Request for a single event path.
+func EncodeIMSubscribeRequest(endpoint uint16, cluster uint32, event uint32) []byte {
+	return encodeIMSubscribeRequest(subscribeRequest{
+		kind:     subscribeRequestKindEvent,
+		endpoint: endpoint,
+		cluster:  cluster,
+		id:       event,
+	})
+}
+
+// EncodeIMSubscribeAttributeRequest encodes an Interaction Model Subscribe Request for a single attribute path.
+func EncodeIMSubscribeAttributeRequest(endpoint uint16, cluster uint32, attr uint32) []byte {
+	return encodeIMSubscribeRequest(subscribeRequest{
+		kind:     subscribeRequestKindAttribute,
+		endpoint: endpoint,
+		cluster:  cluster,
+		id:       attr,
+	})
 }
 
 // EncodeIMInvokeRequest encodes Interaction Model Timed Request message

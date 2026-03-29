@@ -340,17 +340,28 @@ func command_open_commissioning(cmd *cobra.Command, args []string) {
 }
 
 func test_subscribe(cmd *cobra.Command, args []string) {
+	endpoint, _ := strconv.ParseInt(args[0], 0, 16)
+	cluster, _ := strconv.ParseInt(args[1], 0, 16)
+	event, _ := strconv.ParseInt(args[2], 0, 16)
+	runSubscription(cmd, gomat.EncodeIMSubscribeRequest(uint16(endpoint), uint32(cluster), uint32(event)), "EVENT", eventReportDictionary)
+}
+
+func test_subscribe_attr(cmd *cobra.Command, args []string) {
+	endpoint, _ := strconv.ParseInt(args[0], 0, 16)
+	cluster, _ := strconv.ParseInt(args[1], 0, 16)
+	attr, _ := strconv.ParseInt(args[2], 0, 16)
+	runSubscription(cmd, gomat.EncodeIMSubscribeAttributeRequest(uint16(endpoint), uint32(cluster), uint32(attr)), "ATTRIBUTE", attributeReportDictionary)
+}
+
+func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dictionary map[string]string) {
 	fabric := createBasicFabricFromCmd(cmd)
 	channel, err := connectDeviceFromCmd(fabric, cmd)
 	if err != nil {
 		panic(err)
 	}
+	defer channel.Close()
 
-	endpoint, _ := strconv.ParseInt(args[0], 0, 16)
-	cluster, _ := strconv.ParseInt(args[1], 0, 16)
-	event, _ := strconv.ParseInt(args[2], 0, 16)
-	to_send := gomat.EncodeIMSubscribeRequest(uint16(endpoint), uint32(cluster), uint32(event))
-	channel.Send(to_send)
+	channel.Send(toSend)
 
 	resp, err := channel.Receive()
 	if err != nil {
@@ -359,9 +370,9 @@ func test_subscribe(cmd *cobra.Command, args []string) {
 	if resp.ProtocolHeader.Opcode != gomat.INTERACTION_OPCODE_REPORT_DATA {
 		log.Println("unexpected message")
 		resp.ProtocolHeader.Dump()
-	} else {
-		resp.Tlv.DumpWithDict(0, "", report_data_dictionary)
+		panic("did not receive report data message")
 	}
+	resp.Tlv.DumpWithDict(0, "", dictionary)
 
 	sr := gomat.EncodeIMStatusResponse(resp.ProtocolHeader.ExchangeId, 1)
 	channel.Send(sr)
@@ -381,8 +392,8 @@ func test_subscribe(cmd *cobra.Command, args []string) {
 			continue
 		}
 		if r.ProtocolHeader.Opcode == gomat.INTERACTION_OPCODE_REPORT_DATA {
-			fmt.Printf("EVENT:\n")
-			r.Tlv.DumpWithDict(0, "", report_data_dictionary)
+			fmt.Printf("%s:\n", reportLabel)
+			r.Tlv.DumpWithDict(0, "", dictionary)
 			sr = gomat.EncodeIMStatusResponse(r.ProtocolHeader.ExchangeId, 0)
 			channel.Send(sr)
 		} else {
@@ -424,7 +435,7 @@ func connectDeviceFromCmd(fabric *gomat.Fabric, cmd *cobra.Command) (gomat.Secur
 	return secure_channel, err
 }
 
-var report_data_dictionary = map[string]string{
+var eventReportDictionary = map[string]string{
 	".0":           "Root",
 	".0.0":         "SubscriptionID",
 	".0.1":         "AttributeReports",
@@ -445,6 +456,25 @@ var report_data_dictionary = map[string]string{
 	".0.2.0.1.5":   "DeltaEpochTimestamp",
 	".0.2.0.1.6":   "DeltaTimestamp",
 	".0.2.0.1.7":   "Data",
+	".0.3":         "MoreChunkedMessages",
+	".0.4":         "SuppressResponse",
+}
+
+var attributeReportDictionary = map[string]string{
+	".0":           "Root",
+	".0.0":         "SubscriptionID",
+	".0.1":         "AttributeReports",
+	".0.1.0":       "AttributeReportIB",
+	".0.1.0.0":     "AttributeStatus",
+	".0.1.0.1":     "AttributeData",
+	".0.1.0.1.0":   "Version",
+	".0.1.0.1.1":   "Path",
+	".0.1.0.1.1.1": "Node",
+	".0.1.0.1.1.2": "Endpoint",
+	".0.1.0.1.1.3": "Cluster",
+	".0.1.0.1.1.4": "Attribute",
+	".0.1.0.1.2":   "Data",
+	".0.2":         "EventReports",
 	".0.3":         "MoreChunkedMessages",
 	".0.4":         "SuppressResponse",
 }
@@ -657,6 +687,12 @@ func main() {
 		Use:     "subscribe [endpoint] [cluster] [event]",
 		Example: "subscribe 1 0x101 1",
 		Run:     test_subscribe,
+		Args:    cobra.MinimumNArgs(3),
+	})
+	commandCmd.AddCommand(&cobra.Command{
+		Use:     "subscribe-attr [endpoint] [cluster] [attribute]",
+		Example: "subscribe-attr 1 0x6 0",
+		Run:     test_subscribe_attr,
 		Args:    cobra.MinimumNArgs(3),
 	})
 
