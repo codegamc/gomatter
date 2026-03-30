@@ -2,7 +2,6 @@
 Simple Matter protocol library for Go.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/codegamc/gomatter.svg)](https://pkg.go.dev/github.com/codegamc/gomatter)
-![go build](https://github.com/codegamc/gomatter/actions/workflows/go.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/codegamc/gomatter)](https://goreportcard.com/report/github.com/codegamc/gomatter)
 
 ### goal of project
