@@ -4,10 +4,10 @@ Simple Matter protocol library for Go.
 [![Go Reference](https://pkg.go.dev/badge/github.com/codegamc/gomatter.svg)](https://pkg.go.dev/github.com/codegamc/gomatter)
 [![Go Report Card](https://goreportcard.com/badge/github.com/codegamc/gomatter)](https://goreportcard.com/report/github.com/codegamc/gomatter)
 
-### goal of project
+## Goal
 The goal is to create golang library and supporting tools to access matter devices.
 
-### status of project
+## Status
 - it can
   - commission devices
   - send commands to devices
@@ -19,26 +19,26 @@ The goal is to create golang library and supporting tools to access matter devic
   - open commissioning window
 
 
-#### tested devices
+### Tested devices
 - tested against virtual devices which are part of reference implementation https://github.com/project-chip/connectedhomeip
 - tested with yeelight cube
 - tested with Tapo Devices:
   - VID: 5010, PID: 261 (Tapo P110M)
 
-### general info
+## General info
 - it is best to understand matter to use this, but here is most important info:
   - device access is managed using certificates
   - easiest way how to talk to device is to have signed certificate of device admin user (alternative is setup ACLs and use non-admin user)
   - certificates are signed by CA
   - during commissioning procedure root CA certificate is pushed to device together with id of device admin user
   - root CA certificate is something you need to create once and store. loosing CA keys usually means that you will have to commission devices again
-  - You will not be able to commission a device unless it is already on the network. This library does not support the bluetooth commmissioning required. 
+  - You will not be able to commission a device unless it is already on the network. This library does not support the bluetooth commissioning required.
   - to talk to device you have to commission it first
     - to commission device you usually need its pin/passcode and device be in state open for commissioning
     - device gets into commissioning window open state often by "factory reset"
     - when device is commissioned - connected to some fabric, it can be commissioned into other fabrics using api, where existing admin user sets device to be open for additional commissioning. During that device can be connected to additional fabric(s) - additional root CA installed and additional admin user configured
 
-### how to use test application
+## CLI usage
 - compile
 ```
 git clone git@github.com:codegamc/gomatter.git
@@ -73,10 +73,26 @@ go build -o gomatter demo/main.go
   `./gomatter cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
   - subscription commands now default to low-latency intervals: `--min-interval=0 --max-interval=5`
   - override them when needed, for example: `./gomatter cmd subscribe-attr --ip 192.168.5.178 --controller-id 100 --device-id 500 --min-interval 0 --max-interval 1 1 0x6 0`
+- read an attribute from a device
+  `./gomatter cmd read --ip 192.168.5.178 --controller-id 100 --device-id 500 1 0x6 0`
+- list all fabrics on a device
+  `./gomatter cmd list_fabrics --ip 192.168.5.178 --controller-id 100 --device-id 500`
+- list device types on endpoint 0
+  `./gomatter cmd list_device_types --ip 192.168.5.178 --controller-id 100 --device-id 500`
+- list clusters supported on an endpoint
+  `./gomatter cmd list_supported_clusters --ip 192.168.5.178 --controller-id 100 --device-id 500 1`
+- list network interfaces on a device
+  `./gomatter cmd list_interfaces --ip 192.168.5.178 --controller-id 100 --device-id 500`
+- retrieve diagnostic logs from a device
+  `./gomatter cmd get_logs --ip 192.168.5.178 --controller-id 100 --device-id 500 0`
+- open an additional commissioning window (to add a device to another fabric)
+  `./gomatter cmd open_commissioning --ip 192.168.5.178 --controller-id 100 --device-id 500 123456`
+- show fabric info
+  `./gomatter fabric-info`
 
 
-### how to use api
-#### Example applications
+## API usage
+### Example applications
 - [Simple Example application](examples/basic/basic-main.go) - bootstrap ca, commission, send commands to device
 - [Demo application](demo/main.go)
 
@@ -86,7 +102,7 @@ Use `EncodeIMSubscribeRequestWithIntervals` or `EncodeIMSubscribeAttributeReques
 
 `NewFabric` requires a caller-provided 16-byte IPK. You can create one with `GenerateIPK()`, but if you need to reload an existing fabric you must persist and reuse the same IPK yourself.
 
-#### commission device using api
+### Commission device using api
 create ca with root certificate, create admin user, then commission device:
 ```
 package main
@@ -122,7 +138,7 @@ func main() {
 }
 ```
 
-#### send ON command to commissioned device using api
+### Send ON command to commissioned device using api
 ```
 package main
 
@@ -157,12 +173,14 @@ func main() {
   }
   defer secureChannel.Close()
 
-  on_command := gomatter.EncodeInvokeCommand(1,        // endpoint
-                                          6,        // api cluster (on/off)
-                                          1,        // on command
-                                          []byte{}, // no extra data
-                                          )
-  secureChannel.Send(on_command)
+  onCommand := gomatter.EncodeIMInvokeRequest(1,        // endpoint
+                                             6,        // cluster (on/off)
+                                             1,        // on command
+                                             []byte{}, // no payload
+                                             false,    // not timed
+                                             1,        // exchange ID
+                                             )
+  secureChannel.Send(onCommand)
   resp, err := secureChannel.Receive(context.Background())
   if err != nil {
     panic(err)
@@ -171,7 +189,7 @@ func main() {
 }
 ```
 
-#### discover IP address of previously commissioned device using api
+### Discover IP address of previously commissioned device using api
 Device exposes its info using mdns under identifier [compressed-fabric-id]-[device-id].
 For this reason to discover commissioned device fabric info is required.
 ```
@@ -215,7 +233,7 @@ func main() {
 }
 ```
 
-#### extract pairing passcode from QR code and manual pairing code
+### Extract pairing passcode from QR code and manual pairing code
 Following example shows how to extract passcode from textual representation of QR code or from manual pairing code.
 Manual pairing code can have dash characters at any position(they are discarded)
 ```
@@ -241,7 +259,7 @@ func main() {
 
 ```
 
-#### Set color of light to specific hue color
+### Set color of light to specific hue color
 ```
 package main
 
@@ -299,5 +317,5 @@ func main() {
 ```
 
 
-#### certificate manager
+### Certificate manager
 NewFabric function accepts certificate manager object as input parameter. Certificate manager must implement interface CertificateManager and user can supply own implementation. Supplied CertManager created by `NewFileCertManager` stores all data in `.pem` files under the default `pem` directory, and `FileCertManagerConfig.Path` can be used to store them somewhere else.
