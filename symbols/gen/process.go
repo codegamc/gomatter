@@ -58,7 +58,9 @@ type ClusterXmlDef struct {
 }
 
 func symbolize(in string) string {
-	s := strings.ReplaceAll(in, " ", "")
+	s := strings.TrimSuffix(in, " Cluster")
+	s = strings.TrimSuffix(s, " Clusters")
+	s = strings.ReplaceAll(s, " ", "")
 	s = strings.ReplaceAll(s, "-", "")
 	s = strings.ReplaceAll(s, "/", "")
 	return s
