@@ -14,7 +14,7 @@ type CertificateManager interface {
 
 	// CreateUser creates keys and certificate for node with specific id
 	// it must be possible to later retrieve node keys using GetPrivkey and certificate using GetCertificate
-	CreateUser(node_id uint64) error
+	CreateUser(nodeId uint64) error
 
 	// retrieve certificate of specified node (previously created by CreateUser)
 	GetCertificate(id uint64) (*x509.Certificate, error)
@@ -23,5 +23,5 @@ type CertificateManager interface {
 	GetPrivkey(id uint64) (*ecdsa.PrivateKey, error)
 
 	// create and sign certificate using local CA keys
-	SignCertificate(user_pubkey *ecdsa.PublicKey, node_id uint64) (*x509.Certificate, error)
+	SignCertificate(userPublicKey *ecdsa.PublicKey, nodeId uint64) (*x509.Certificate, error)
 }

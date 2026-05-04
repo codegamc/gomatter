@@ -98,18 +98,18 @@ func (cm *FileCertManager) GetPrivkey(id uint64) (*ecdsa.PrivateKey, error) {
 	return pk.(*ecdsa.PrivateKey), nil
 }
 
-func (cm *FileCertManager) CreateUser(node_id uint64) error {
+func (cm *FileCertManager) CreateUser(nodeId uint64) error {
 	if err := os.MkdirAll(cm.path, 0700); err != nil {
 		return fmt.Errorf("create certificate directory %q: %w", cm.path, err)
 	}
-	privkey, err := generateAndStoreKeyEcdsa(cm.pemBase(certIdToName(node_id)))
+	privkey, err := generateAndStoreKeyEcdsa(cm.pemBase(certIdToName(nodeId)))
 	if err != nil {
 		return err
 	}
-	_, err = cm.SignCertificate(&privkey.PublicKey, node_id)
+	_, err = cm.SignCertificate(&privkey.PublicKey, nodeId)
 	return err
 }
-func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id uint64) (*x509.Certificate, error) {
+func (cm *FileCertManager) SignCertificate(userPublicKey *ecdsa.PublicKey, nodeId uint64) (*x509.Certificate, error) {
 	if cm.ca_private_key == nil || cm.ca_certificate == nil {
 		return nil, fmt.Errorf("CA certificate and private key must be loaded before signing certificates")
 	}
@@ -119,7 +119,7 @@ func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id
 	sh.Write(public_key_auth)
 	sha_auth := sh.Sum(nil)
 
-	public_key_subj := user_pubkey
+	public_key_subj := userPublicKey
 	public_key_subj2 := elliptic.Marshal(elliptic.P256(), public_key_subj.X, public_key_subj.Y)
 	shp := sha1.New()
 	shp.Write(public_key_subj2)
@@ -127,7 +127,7 @@ func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id
 
 	subj := pkix.Name{}
 
-	node_id_string := fmt.Sprintf("%016X", node_id)
+	node_id_string := fmt.Sprintf("%016X", nodeId)
 	valname, err := asn1.MarshalWithParams(node_id_string, "utf8")
 	if err != nil {
 		return nil, err
@@ -197,10 +197,10 @@ func (cm *FileCertManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id
 	if err != nil {
 		return nil, err
 	}
-	if err := storeCertificate(cm.pemBase(certIdToName(node_id)), cert_bytes); err != nil {
+	if err := storeCertificate(cm.pemBase(certIdToName(nodeId)), cert_bytes); err != nil {
 		return nil, err
 	}
-	log.Printf("Signed certificate for node 0x%x\n", node_id)
+	log.Printf("Signed certificate for node 0x%x\n", nodeId)
 	return out_parsed, nil
 }
 
