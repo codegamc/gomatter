@@ -9,27 +9,35 @@ import (
 
 type stubCertificateManager struct{}
 
-func (stubCertificateManager) GetCaPublicKey() ecdsa.PublicKey {
-	return ecdsa.PublicKey{}
+func (stubCertificateManager) GetCAPublicKey() (ecdsa.PublicKey, error) {
+	return ecdsa.PublicKey{}, nil
 }
 
-func (stubCertificateManager) GetCaCertificate() *x509.Certificate {
-	return nil
-}
-
-func (stubCertificateManager) ProvisionNodeIdentity(node_id uint64) error {
-	return nil
-}
-
-func (stubCertificateManager) GetCertificate(id uint64) (*x509.Certificate, error) {
+func (stubCertificateManager) GetCACertificate() (*x509.Certificate, error) {
 	return nil, nil
 }
 
-func (stubCertificateManager) GetPrivkey(id uint64) (*ecdsa.PrivateKey, error) {
+func (stubCertificateManager) ProvisionNodeIdentity(nodeId uint64) error {
+	return nil
+}
+
+func (stubCertificateManager) BootstrapCA() error {
+	return nil
+}
+
+func (stubCertificateManager) Load() error {
+	return nil
+}
+
+func (stubCertificateManager) GetNodeCertificate(id uint64) (*x509.Certificate, error) {
 	return nil, nil
 }
 
-func (stubCertificateManager) SignCertificate(user_pubkey *ecdsa.PublicKey, node_id uint64) (*x509.Certificate, error) {
+func (stubCertificateManager) GetNodePrivateKey(id uint64) (*ecdsa.PrivateKey, error) {
+	return nil, nil
+}
+
+func (stubCertificateManager) SignCertificate(userPublicKey *ecdsa.PublicKey, nodeId uint64) (*x509.Certificate, error) {
 	return nil, nil
 }
 

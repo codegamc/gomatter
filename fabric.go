@@ -24,26 +24,37 @@ func (fabric Fabric) Id() uint64 {
 
 // CompressedFabric returns Compressed Fabric Identifier which is used to identify fabric
 // in matter protocol.
-func (fabric Fabric) CompressedFabric() []byte {
-	capub := fabric.CertificateManager.GetCaPublicKey()
+func (fabric Fabric) CompressedFabric() ([]byte, error) {
+	capub, err := fabric.CertificateManager.GetCAPublicKey()
+	if err != nil {
+		return nil, err
+	}
 	caPublicKey := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
 
 	var fabricBigEndian bytes.Buffer
 	binary.Write(&fabricBigEndian, binary.BigEndian, fabric.id)
 
 	key := hkdfSHA256(caPublicKey[1:], fabricBigEndian.Bytes(), []byte("CompressedFabric"), 8)
-	return key
+	return key, nil
 }
 
-func (fabric Fabric) makeIPK() []byte {
-	key := hkdfSHA256(fabric.ipk, fabric.CompressedFabric(), []byte("GroupKey v1.0"), 16)
-	return key
+func (fabric Fabric) makeIPK() ([]byte, error) {
+	cf, err := fabric.CompressedFabric()
+	if err != nil {
+		return nil, err
+	}
+	key := hkdfSHA256(fabric.ipk, cf, []byte("GroupKey v1.0"), 16)
+	return key, nil
 }
 
-func (fabric Fabric) GetOperationalDeviceId(in uint64) string {
-	compressedFabric := hex.EncodeToString(fabric.CompressedFabric())
+func (fabric Fabric) GetOperationalDeviceId(in uint64) (string, error) {
+	cf, err := fabric.CompressedFabric()
+	if err != nil {
+		return "", err
+	}
+	compressedFabric := hex.EncodeToString(cf)
 	ids := fmt.Sprintf("%s-%016X", compressedFabric, in)
-	return strings.ToUpper(ids)
+	return strings.ToUpper(ids), nil
 }
 
 // GenerateIPK creates a cryptographically secure random 16-byte IPK for callers

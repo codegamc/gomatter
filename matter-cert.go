@@ -48,11 +48,14 @@ func caConvertDN(in pkix.Name, out *mattertlv.TLVBuffer) {
 // Matter certificate format is way how to make matter even more weird and complicated.
 // Signature of matter vertificate must match signature of  certificate reencoded to DER encoding.
 // This requires to handle very carefully order and presence of all elements in original x509.
-func SerializeCertificateIntoMatter(fabric *Fabric, in *x509.Certificate) []byte {
+func SerializeCertificateIntoMatter(fabric *Fabric, in *x509.Certificate) ([]byte, error) {
 	pub := in.PublicKey.(*ecdsa.PublicKey)
 	public_key := elliptic.Marshal(elliptic.P256(), pub.X, pub.Y)
 
-	cacert := fabric.CertificateManager.GetCaCertificate()
+	cacert, err := fabric.CertificateManager.GetCACertificate()
+	if err != nil {
+		return nil, err
+	}
 	capub := cacert.PublicKey.(*ecdsa.PublicKey)
 	capublic_key := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
 	sha1_stream := sha1.New()
@@ -102,5 +105,5 @@ func SerializeCertificateIntoMatter(fabric *Fabric, in *x509.Certificate) []byte
 	s4 := append(r, s...)
 	tlv.WriteOctetString(11, s4)
 	tlv.WriteStructEnd()
-	return tlv.Bytes()
+	return tlv.Bytes(), nil
 }

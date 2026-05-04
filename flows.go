@@ -102,11 +102,13 @@ func SigmaExchange(ctx context.Context, fabric *Fabric, controllerID uint64, dev
 		sessionPrivkey: controllerPrivkey,
 		exchange:       uint16(randm.Intn(0xffff)),
 	}
-	sigmaContext.genSigma1(fabric, deviceID)
+	err := sigmaContext.genSigma1(fabric, deviceID)
+	if err != nil {
+		return nil, err
+	}
 	sigma1 := genSigma1Req2(sigmaContext.sigma1Payload, sigmaContext.exchange)
 	secureChannel.Send(sigma1)
 
-	var err error
 	sigmaContext.sigma2Dec, err = secureChannel.Receive(ctx)
 	if err != nil {
 		return nil, err
@@ -120,15 +122,18 @@ func SigmaExchange(ctx context.Context, fabric *Fabric, controllerID uint64, dev
 		return nil, fmt.Errorf("sigma2 not received")
 	}
 
-	sigmaContext.controllerKey, err = fabric.CertificateManager.GetPrivkey(controllerID)
+	sigmaContext.controllerKey, err = fabric.CertificateManager.GetNodePrivateKey(controllerID)
 	if err != nil {
 		return nil, err
 	}
-	controllerCert, err := fabric.CertificateManager.GetCertificate(controllerID)
+	controllerCert, err := fabric.CertificateManager.GetNodeCertificate(controllerID)
 	if err != nil {
 		return nil, err
 	}
-	sigmaContext.controllerMatterCertificate = SerializeCertificateIntoMatter(fabric, controllerCert)
+	sigmaContext.controllerMatterCertificate, err = SerializeCertificateIntoMatter(fabric, controllerCert)
+	if err != nil {
+		return nil, err
+	}
 
 	toSend, err := sigmaContext.sigma3(fabric)
 	if err != nil {
@@ -202,7 +207,15 @@ func Commission(ctx context.Context, fabric *Fabric, deviceIP net.IP, pin int, c
 
 	//AddTrustedRootCertificate
 	var tlv4 mattertlv.TLVBuffer
-	tlv4.WriteOctetString(0, SerializeCertificateIntoMatter(fabric, fabric.CertificateManager.GetCaCertificate()))
+	cacert, err := fabric.CertificateManager.GetCACertificate()
+	if err != nil {
+		return err
+	}
+	certMatter, err := SerializeCertificateIntoMatter(fabric, cacert)
+	if err != nil {
+		return err
+	}
+	tlv4.WriteOctetString(0, certMatter)
 	toSend = EncodeIMInvokeRequest(0, 0x3e, 0xb, tlv4.Bytes(), false, uint16(randm.Intn(0xffff)))
 	secureChannel.Send(toSend)
 
@@ -223,7 +236,10 @@ func Commission(ctx context.Context, fabric *Fabric, deviceIP net.IP, pin int, c
 	if err != nil {
 		return err
 	}
-	nocMatter := SerializeCertificateIntoMatter(fabric, nocX509)
+	nocMatter, err := SerializeCertificateIntoMatter(fabric, nocX509)
+	if err != nil {
+		return err
+	}
 	//AddNOC
 	var tlv5 mattertlv.TLVBuffer
 	tlv5.WriteOctetString(0, nocMatter)

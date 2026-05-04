@@ -27,7 +27,7 @@ type sigmaContext struct {
 	exchange      uint16
 }
 
-func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) {
+func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) error {
 	var tlvx mattertlv.TLVBuffer
 	tlvx.WriteAnonStruct()
 
@@ -41,7 +41,10 @@ func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) {
 	var destinationMessage bytes.Buffer
 	destinationMessage.Write(initiatorRandom)
 	//cacert := ca.LoadCert("ca-cert.pem")
-	cacert := fabric.CertificateManager.GetCaCertificate()
+	cacert, err := fabric.CertificateManager.GetCACertificate()
+	if err != nil {
+		return err
+	}
 	capub := cacert.PublicKey.(*ecdsa.PublicKey)
 	caPublicKey := elliptic.Marshal(elliptic.P256(), capub.X, capub.Y)
 
@@ -55,7 +58,10 @@ func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) {
 	node = deviceID
 	binary.Write(&destinationMessage, binary.LittleEndian, node)
 
-	key := fabric.makeIPK()
+	key, err := fabric.makeIPK()
+	if err != nil {
+		return err
+	}
 
 	destinationIdentifier := hmacSHA256Enc(destinationMessage.Bytes(), key)
 
@@ -64,6 +70,7 @@ func (sc *sigmaContext) genSigma1(fabric *Fabric, deviceID uint64) {
 	tlvx.WriteOctetString(4, sc.sessionPrivkey.PublicKey().Bytes())
 	tlvx.WriteStructEnd()
 	sc.sigma1Payload = tlvx.Bytes()
+	return nil
 }
 
 func genSigma1Req2(payload []byte, exchange uint16) []byte {
@@ -133,7 +140,10 @@ func (sc *sigmaContext) sigma3(fabric *Fabric) ([]byte, error) {
 	s3KTranscript = append(s3KTranscript, sc.sigma2Dec.Payload...)
 
 	transcriptHash := sha256Enc(s3KTranscript)
-	s3Salt := fabric.makeIPK()
+	s3Salt, err := fabric.makeIPK()
+	if err != nil {
+		return []byte{}, err
+	}
 	s3Salt = append(s3Salt, transcriptHash...)
 
 	s3Key := hkdfSHA256(sharedSecret, s3Salt, []byte("Sigma3"), 16)
@@ -160,7 +170,10 @@ func (sc *sigmaContext) sigma3(fabric *Fabric) ([]byte, error) {
 	sessionKeyTranscript := s3KTranscript
 	sessionKeyTranscript = append(sessionKeyTranscript, tlvS3.Bytes()...)
 	transcriptHash = sha256Enc(sessionKeyTranscript)
-	salt := fabric.makeIPK()
+	salt, err := fabric.makeIPK()
+	if err != nil {
+		return []byte{}, err
+	}
 	salt = append(salt, transcriptHash...)
 
 	keypack := hkdfSHA256(sharedSecret, salt, []byte("SessionKeys"), 16*3)

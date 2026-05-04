@@ -765,7 +765,10 @@ func main() {
 				return commissionError(pin, err)
 			}
 
-			cf := fabric.CompressedFabric()
+			cf, err := fabric.CompressedFabric()
+			if err != nil {
+				panic(err)
+			}
 			csf := hex.EncodeToString(cf)
 			dids := fmt.Sprintf("%s-%016X", csf, deviceID)
 			dids = strings.ToUpper(dids)
@@ -782,7 +785,10 @@ func main() {
 		Use: "fabric-info",
 		Run: func(cmd *cobra.Command, args []string) {
 			fabric := createBasicFabricFromCmd(cmd)
-			cf := fabric.CompressedFabric()
+			cf, err := fabric.CompressedFabric()
+			if err != nil {
+				panic(err)
+			}
 			csf := hex.EncodeToString(cf)
 			csf = strings.ToUpper(csf)
 			fmt.Printf("compressed-fabric: %s", csf)
@@ -817,7 +823,7 @@ func main() {
 				panic(fmt.Sprintf("invalid fabric id %s", fabricIDStr))
 			}
 			cm := gomatter.NewFileCertManager(id, gomatter.FileCertManagerConfig{})
-			err = cm.BootstrapCa()
+			err = cm.BootstrapCA()
 			if err != nil {
 				panic(err)
 			}
@@ -843,7 +849,10 @@ func main() {
 				if err != nil {
 					log.Panicf("incorrect device specification %s", dids)
 				}
-				cf := fabric.CompressedFabric()
+				cf, err := fabric.CompressedFabric()
+				if err != nil {
+					log.Panicf("failed to get compressed fabric: %v", err)
+				}
 				csf := hex.EncodeToString(cf)
 				dids = fmt.Sprintf("%s-%016X", csf, deviceID)
 				device_filter = strings.ToUpper(dids)
