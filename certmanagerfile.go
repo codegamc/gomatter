@@ -87,18 +87,18 @@ func (cm *FileCertManager) Load() error {
 	return err
 }
 
-func (cm *FileCertManager) GetCertificate(id uint64) (*x509.Certificate, error) {
-	return loadCertificate(cm.pathFor(certIdToName(id) + "-cert.pem"))
+func (cm *FileCertManager) GetCertificate(nodeId uint64) (*x509.Certificate, error) {
+	return loadCertificate(cm.pathFor(certIdToName(nodeId) + "-cert.pem"))
 }
-func (cm *FileCertManager) GetPrivkey(id uint64) (*ecdsa.PrivateKey, error) {
-	pk, err := loadPrivKey(cm.pathFor(certIdToName(id) + "-private.pem"))
+func (cm *FileCertManager) GetPrivkey(nodeId uint64) (*ecdsa.PrivateKey, error) {
+	pk, err := loadPrivKey(cm.pathFor(certIdToName(nodeId) + "-private.pem"))
 	if err != nil {
 		return nil, err
 	}
 	return pk.(*ecdsa.PrivateKey), nil
 }
 
-func (cm *FileCertManager) CreateUser(nodeId uint64) error {
+func (cm *FileCertManager) ProvisionNodeIdentity(nodeId uint64) error {
 	if err := os.MkdirAll(cm.path, 0700); err != nil {
 		return fmt.Errorf("create certificate directory %q: %w", cm.path, err)
 	}

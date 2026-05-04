@@ -17,7 +17,7 @@ func (stubCertificateManager) GetCaCertificate() *x509.Certificate {
 	return nil
 }
 
-func (stubCertificateManager) CreateUser(node_id uint64) error {
+func (stubCertificateManager) ProvisionNodeIdentity(node_id uint64) error {
 	return nil
 }
 

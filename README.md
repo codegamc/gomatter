@@ -48,7 +48,7 @@ go build -o gomatter demo/main.go
 
 - create directory to hold keys and certificates `mkdir pem`
 - generate CA key and certificate using `./gomatter ca-bootstrap`
-- generate controller key and certificate using `./gomatter ca-createuser 100`
+- generate controller key and certificate using `./gomatter ca-provisionnode 100`
   - 100 is example node-id of controller
 - find device IP
   - discover command can be used to discover matter devices and their ip address `./gomatter discover commissionable -d`
@@ -129,7 +129,7 @@ func main() {
   cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
   cm.BootstrapCa()
   cm.Load()
-  cm.CreateUser(adminUser)
+  cm.ProvisionNodeIdentity(adminUser)
   fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
   if err != nil {
     panic(err)

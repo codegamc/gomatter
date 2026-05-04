@@ -789,8 +789,8 @@ func main() {
 		},
 	}
 
-	var cacreateuserCmd = &cobra.Command{
-		Use: "ca-createuser [id]",
+	var caProvisionNodeCmd = &cobra.Command{
+		Use: "ca-provisionnode [id]",
 		Run: func(cmd *cobra.Command, args []string) {
 			ids := args[0]
 			id, err := strconv.ParseUint(ids, 0, 64)
@@ -799,7 +799,7 @@ func main() {
 			}
 			//cm := NewCertManager(0x99)
 			fabric := createBasicFabricFromCmd(cmd)
-			err = fabric.CertificateManager.CreateUser(uint64(id))
+			err = fabric.CertificateManager.ProvisionNodeIdentity(uint64(id))
 			if err != nil {
 				panic(err)
 			}
@@ -807,7 +807,7 @@ func main() {
 		},
 		Args: cobra.MinimumNArgs(1),
 	}
-	cacreateuserCmd.Flags().StringP("id", "i", "", "user id")
+	caProvisionNodeCmd.Flags().StringP("id", "i", "", "user id")
 	var cabootCmd = &cobra.Command{
 		Use: "ca-bootstrap",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -901,7 +901,7 @@ func main() {
 		Args: cobra.MinimumNArgs(1),
 	}
 
-	rootCmd.AddCommand(cacreateuserCmd)
+	rootCmd.AddCommand(caProvisionNodeCmd)
 	rootCmd.AddCommand(cabootCmd)
 	rootCmd.AddCommand(commissionCmd)
 	rootCmd.AddCommand(discoverCmd)

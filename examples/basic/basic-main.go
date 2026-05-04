@@ -25,7 +25,7 @@ func bootstrapCA(fabricID, adminUser uint64) {
 	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
 	cm.BootstrapCa()
 	cm.Load()
-	if err := cm.CreateUser(adminUser); err != nil {
+	if err := cm.ProvisionNodeIdentity(adminUser); err != nil {
 		panic(err)
 	}
 }

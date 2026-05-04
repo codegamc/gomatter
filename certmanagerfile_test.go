@@ -18,8 +18,8 @@ func TestFileCertManagerStoresFilesInConfiguredDirectory(t *testing.T) {
 	if err := cm.Load(); err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
-	if err := cm.CreateUser(0x42); err != nil {
-		t.Fatalf("CreateUser() error = %v", err)
+	if err := cm.ProvisionNodeIdentity(0x42); err != nil {
+		t.Fatalf("ProvisionNodeIdentity() error = %v", err)
 	}
 
 	for _, name := range []string{
@@ -51,15 +51,15 @@ func TestFileCertManagerLoadReturnsMissingCAError(t *testing.T) {
 	}
 }
 
-func TestFileCertManagerCreateUserReturnsSigningError(t *testing.T) {
+func TestFileCertManagerProvisionNodeIdentityReturnsSigningError(t *testing.T) {
 	cm := NewFileCertManager(0x1234, FileCertManagerConfig{Path: t.TempDir()})
 
-	err := cm.CreateUser(0x42)
+	err := cm.ProvisionNodeIdentity(0x42)
 	if err == nil {
-		t.Fatal("CreateUser() error = nil, want signing error")
+		t.Fatal("ProvisionNodeIdentity() error = nil, want signing error")
 	}
 	if !strings.Contains(err.Error(), "must be loaded") {
-		t.Fatalf("CreateUser() error = %v, want CA load failure", err)
+		t.Fatalf("ProvisionNodeIdentity() error = %v, want CA load failure", err)
 	}
 }
 
