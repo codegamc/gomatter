@@ -22,17 +22,19 @@ import (
 var demoIPK = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf}
 
 func bootstrapCA(fabricID, adminUser uint64) {
-	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
-	cm.BootstrapCa()
-	cm.Load()
+	store := gomatter.NewFileCertificateStore("")
+	cm := gomatter.NewDefaultCertificateManager(fabricID, store)
+	if err := cm.InitializeRootCA(1); err != nil {
+		panic(err)
+	}
 	if err := cm.ProvisionNodeIdentity(adminUser); err != nil {
 		panic(err)
 	}
 }
 
 func loadFabric(fabricID uint64) *gomatter.Fabric {
-	cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
-	cm.Load()
+	store := gomatter.NewFileCertificateStore("")
+	cm := gomatter.NewDefaultCertificateManager(fabricID, store)
 	fabric, err := gomatter.NewFabric(fabricID, cm, demoIPK)
 	if err != nil {
 		panic(err)

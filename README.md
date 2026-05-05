@@ -127,7 +127,7 @@ func main() {
   }
 
   cm := gomatter.NewFileCertManager(fabricID, gomatter.FileCertManagerConfig{})
-  cm.BootstrapCa()
+  cm.InitializeRootCA(1)
   cm.Load()
   cm.ProvisionNodeIdentity(adminUser)
   fabric, err := gomatter.NewFabric(fabricID, cm, ipk)
@@ -222,7 +222,8 @@ func main() {
     panic(err)
   }
 
-  identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(fabric.CompressedFabric()), deviceID)
+  cf, _ := fabric.CompressedFabric()
+  identifier := fmt.Sprintf("%s-%016X", hex.EncodeToString(cf), deviceID)
   identifier = strings.ToUpper(identifier)
   identifier = identifier + "._matter._tcp.local."
   fmt.Printf("%s\n", identifier)

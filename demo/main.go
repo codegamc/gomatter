@@ -426,12 +426,12 @@ func runSubscription(cmd *cobra.Command, toSend []byte, reportLabel string, dict
 }
 
 func createBasicFabric(id uint64) *gomatter.Fabric {
-	cert_manager := gomatter.NewFileCertManager(id, gomatter.FileCertManagerConfig{})
-	err := cert_manager.Load()
-	if err != nil {
-		panic(err)
+	store := gomatter.NewFileCertificateStore("")
+	certManager := gomatter.NewDefaultCertificateManager(id, store)
+	if err := certManager.Load(); err != nil {
+		panic(fmt.Sprintf("certificate store not initialized (run ca-bootstrap first): %v", err))
 	}
-	fabric, err := gomatter.NewFabric(id, cert_manager, demoIPK)
+	fabric, err := gomatter.NewFabric(id, certManager, demoIPK)
 	if err != nil {
 		panic(err)
 	}
@@ -803,9 +803,14 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
-			//cm := NewCertManager(0x99)
-			fabric := createBasicFabricFromCmd(cmd)
-			err = fabric.CertificateManager.ProvisionNodeIdentity(uint64(id))
+			fabricIDStr, _ := cmd.Flags().GetString("fabric")
+			fabricID, err := strconv.ParseUint(fabricIDStr, 0, 64)
+			if err != nil {
+				panic(err)
+			}
+			store := gomatter.NewFileCertificateStore("")
+			cm := gomatter.NewDefaultCertificateManager(fabricID, store)
+			err = cm.ProvisionNodeIdentity(uint64(id))
 			if err != nil {
 				panic(err)
 			}
@@ -822,8 +827,9 @@ func main() {
 			if err != nil {
 				panic(fmt.Sprintf("invalid fabric id %s", fabricIDStr))
 			}
-			cm := gomatter.NewFileCertManager(id, gomatter.FileCertManagerConfig{})
-			err = cm.BootstrapCA()
+			store := gomatter.NewFileCertificateStore("")
+			cm := gomatter.NewDefaultCertificateManager(id, store)
+			err = cm.InitializeRootCA(1)
 			if err != nil {
 				panic(err)
 			}

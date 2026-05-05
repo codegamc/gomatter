@@ -17,18 +17,6 @@ func (stubCertificateManager) GetCACertificate() (*x509.Certificate, error) {
 	return nil, nil
 }
 
-func (stubCertificateManager) ProvisionNodeIdentity(nodeId uint64) error {
-	return nil
-}
-
-func (stubCertificateManager) BootstrapCA() error {
-	return nil
-}
-
-func (stubCertificateManager) Load() error {
-	return nil
-}
-
 func (stubCertificateManager) GetNodeCertificate(id uint64) (*x509.Certificate, error) {
 	return nil, nil
 }

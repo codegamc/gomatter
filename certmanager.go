@@ -1,3 +1,4 @@
+// Package gomatter provides certificate management.
 package gomatter
 
 import (
@@ -5,23 +6,22 @@ import (
 	"crypto/x509"
 )
 
-// matter certificate manager interface
+// CertificateManager defines certificate management operations.
 // all generated certificates must be compatible with matter
 //   - this means that after they are reencoded to matter format and back their signature must match
 type CertificateManager interface {
-	GetCaPublicKey() ecdsa.PublicKey
-	GetCaCertificate() *x509.Certificate
+	// GetCACertificate retrieves CA certificate
+	GetCACertificate() (*x509.Certificate, error)
 
-	// ProvisionNodeIdentity creates keys and certificate for node with specific id
-	// it must be possible to later retrieve node keys using GetPrivkey and certificate using GetCertificate
-	ProvisionNodeIdentity(nodeId uint64) error
+	// GetCAPublicKey retrieves CA public key
+	GetCAPublicKey() (ecdsa.PublicKey, error)
 
-	// retrieve certificate of specified node (previously created by ProvisionNodeIdentity)
-	GetCertificate(nodeId uint64) (*x509.Certificate, error)
+	// GetNodeCertificate retrieves certificate of specified node
+	GetNodeCertificate(nodeId uint64) (*x509.Certificate, error)
 
-	// retrieve key of specified node (previously created by ProvisionNodeIdentity)
-	GetPrivkey(nodeId uint64) (*ecdsa.PrivateKey, error)
+	// GetNodePrivateKey retrieves key of specified node
+	GetNodePrivateKey(nodeId uint64) (*ecdsa.PrivateKey, error)
 
-	// create and sign certificate using local CA keys
-	SignCertificate(userPublicKey *ecdsa.PublicKey, nodeId uint64) (*x509.Certificate, error)
+	// SignCertificate creates and sign certificate using local CA keys
+	SignCertificate(pubKey *ecdsa.PublicKey, nodeId uint64) (*x509.Certificate, error)
 }
